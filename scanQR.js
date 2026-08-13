@@ -116,7 +116,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             `🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n` +
             `👤 บัญชีผู้รับ: ${EXPECTED_RECEIVER_NAME}\n` +
             `💰 ยอดชำระตรงกัน: ${actualAmount.toLocaleString()} บาท\n` +
-            `⏰ เวลาทำรายการ: ${new Date().toLocaleString('th-TH')}`;
+            `⏰ เวลาทำรายการ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`
 
         await axios.post(
             'https://api.line.me/v2/bot/message/push',
