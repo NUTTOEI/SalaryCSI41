@@ -1,3 +1,14 @@
+const urlParams = new URLSearchParams(window.location.search);
+const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
+
+// 🟢 ประกาศ KEYS ไว้เป็นตัวแปรกลางที่จุดเดียว
+const KEYS = {
+    MEMBERS: `memberList_${currentBranch}`,
+    TITLE: `branchTitle_${currentBranch}`,
+    RATE: `monthlyRate_${currentBranch}`,
+    TARGET: `targetAmount_${currentBranch}`
+};
+
 const CURRENT_YEAR = new Date().getFullYear();
 
 const THAI_MONTHS = [

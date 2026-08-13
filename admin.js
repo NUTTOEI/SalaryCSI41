@@ -1,21 +1,21 @@
-const urlParams = new URLSearchParams(window.location.search);
-const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
+// const urlParams = new URLSearchParams(window.location.search);
+// const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
 
-const KEYS = {
-    MEMBERS: `memberList_${currentBranch}`,
-    TITLE: `branchTitle_${currentBranch}`,
-    RATE: `monthlyRate_${currentBranch}`,
-    TARGET: `targetAmount_${currentBranch}`
-};
+// const KEYS = {
+//     MEMBERS: `memberList_${currentBranch}`,
+//     TITLE: `branchTitle_${currentBranch}`,
+//     RATE: `monthlyRate_${currentBranch}`,
+//     TARGET: `targetAmount_${currentBranch}`
+// };
 
-function getMembersList() {
-    const data = localStorage.getItem(KEYS.MEMBERS);
-    return data ? JSON.parse(data) : [];
-}
+// function getMembersList() {
+//     const data = localStorage.getItem(KEYS.MEMBERS);
+//     return data ? JSON.parse(data) : [];
+// }
 
-function saveMemberList(list) {
-    localStorage.setItem(KEYS.MEMBERS, JSON.stringify(list));
-}
+// function saveMemberList(list) {
+//     localStorage.setItem(KEYS.MEMBERS, JSON.stringify(list));
+// }
 
 
 if (typeof MEMBERS === "undefined") MEMBERS = [];
