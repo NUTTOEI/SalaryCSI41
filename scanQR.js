@@ -14,9 +14,9 @@ app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 const processedSlips = new Set();
 
-// 🟢 1. กำหนดค่า LINE OA (Messaging API)
-const LINE_ACCESS_TOKEN = "1Pml8XKl5ko6nkGgnK9zhEbK1zWKhcfsUTXgRNk+UUqUu3mKYl1FEBwgZVNbRHQTJQhPaGk8iiObDe7ntZTow+8l0yI26f9DdmNJl/Bco1f3ON+5pnEqwLHzFoZgKu4oe6v7lwkgSJC7isvPLDqeuQdB04t89/1O/w1cDnyilFU=";
-const LINE_TARGET_ID = "Ufac721db10fe012f12410f3cf59c3eb7";
+// 🟢 1. ดึงค่า LINE OA จาก Environment Variables บน Render
+const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
+const LINE_TARGET_ID = process.env.LINE_TARGET_ID;
 
 // 🟢 2. กำหนดชื่อบัญชีผู้รับเงินที่ต้องตรงกัน
 const EXPECTED_RECEIVER_NAME = "ณัฐวัฒน์ สุดพูล";
@@ -43,10 +43,16 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'สลิปนี้เคยถูกส่งมาแล้ว' });
         }
 
-        // 3. อ่านข้อความบนสลิปด้วย OCR
-        console.log("🔍 กำลังตรวจสอบข้อมูลบนสลิป...");
+        // 3. ปรับแต่งรูปภาพ (grayscale + normalize) เพื่อตัดสีพื้นหลังและอ่านข้อความผ่าน OCR
+        console.log("🔍 กำลังประมวลผลรูปภาพและอ่านข้อความด้วย OCR...");
+        const processedBuffer = await sharp(req.file.buffer)
+            .resize(1200)
+            .grayscale()
+            .normalize()
+            .toBuffer();
+
         const worker = await createWorker('tha+eng');
-        const { data: { text } } = await worker.recognize(req.file.buffer);
+        const { data: { text } } = await worker.recognize(processedBuffer);
         await worker.terminate();
 
         // 🟢 4. ตรวจสอบชื่อบัญชีปลายทาง
@@ -60,19 +66,22 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             });
         }
 
-        // 🟢 5. ตรวจสอบยอดเงิน (ดึงตัวเลขทศนิยมทั้งหมดและตัดค่าธรรมเนียม 0.00 ออก)
-        let actualAmount = null;
-        const allAmounts = text.match(/\b[\d,]+\.\d{2}\b/g);
+        // 🟢 5. ตรวจสอบยอดเงิน (ยืดหยุ่นรองรับ MyMo และธนาคารอื่น)
+        const foundAmounts = [];
+        const regex = /(\d{1,3}(?:,\d{3})*|\d+)[\.\,\s]+(\d{2})/g;
+        let match;
 
-        if (allAmounts && allAmounts.length > 0) {
-            const validAmounts = allAmounts
-                .map(amt => parseFloat(amt.replace(/,/g, '')))
-                .filter(amt => amt > 0); // ตัด 0.00 ออก
-
-            if (validAmounts.length > 0) {
-                // หากมีตัวเลขตรงกับยอดที่ต้องการให้เลือกตัวนั้น หรือเลือกตัวเลขแรกที่พบ
-                actualAmount = validAmounts.includes(expectedAmount) ? expectedAmount : validAmounts[0];
+        while ((match = regex.exec(text)) !== null) {
+            const val = parseFloat(match[1].replace(/,/g, '') + '.' + match[2]);
+            if (val > 0) {
+                foundAmounts.push(val);
             }
+        }
+
+        let actualAmount = null;
+
+        if (foundAmounts.length > 0) {
+            actualAmount = foundAmounts.includes(expectedAmount) ? expectedAmount : foundAmounts[0];
         }
 
         if (!actualAmount) {
@@ -122,4 +131,6 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
     }
 });
 
-app.listen(3000, () => console.log(`🚀 Server running on http://localhost:3000`));
+// 🟢 7. ให้ระบบเลือก Port อัตโนมัติจาก Render (หรือ 3000 กรณีรัน Local)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
