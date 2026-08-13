@@ -6,10 +6,15 @@ const sharp = require('sharp');
 const jsQR = require('jsqr');
 const axios = require('axios');
 const { createWorker } = require('tesseract.js');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'member.html'));
+})
 
 const upload = multer({ storage: multer.memoryStorage() });
 const processedSlips = new Set();
