@@ -93,7 +93,7 @@ function getMembersData() {
 }
 
 function getTargetData() {
-    const saved = localStorage.getItem(KEYS.MEMBERS);
+    const saved = localStorage.getItem(KEYS.TARGET);
     return saved ? Number(saved) : 4000;
 }
 
@@ -102,8 +102,8 @@ var TARGET_AMOUNT = getTargetData();
 
 function persistAll() {
     try {
-        localStorage.setItem("KEYS.MEMBERS", JSON.stringify(MEMBERS));
-        localStorage.setItem("KEYS.TARGET", String(TARGET_AMOUNT));
+        localStorage.setItem(KEYS.MEMBERS, JSON.stringify(MEMBERS));
+        localStorage.setItem(KEYS.TARGET, String(TARGET_AMOUNT));
     } catch (e) {
         console.log("บันทึก localStorage ไม่ได้:", e);
     }

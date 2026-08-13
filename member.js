@@ -9,12 +9,12 @@ const KEYS = {
 };
 
 function getMembersList() {
-    const data = localStorage.getItem(STORAGE_KEY.MEMBERS);
+    const data = localStorage.getItem(KEYS.MEMBERS);
     return data ? JSON.parse(data) : [];
 }
 
 function saveMemberList(list) {
-    localStorage.setItem(STORAGE_KEY.MEMBERS, JSON.stringify(list));
+    localStorage.setItem(KEYS.MEMBERS, JSON.stringify(list));
 }
 
 // ===== member.js — หน้าค้นหา/โปรไฟล์ของสมาชิก =====
@@ -467,7 +467,7 @@ function getMemberStatus(m) {
 initApp();
 
 window.addEventListener("storage", (e) => {
-    if (e.key === "KEYS.MEMBERS" || e.key === KEYS.TARGET) {
+    if (e.key === KEYS.MEMBERS || e.key === KEYS.TARGET) {
         if (e.key === KEYS.MEMBERS && e.newValue) MEMBERS = JSON.parse(e.newValue);
         if (e.key === KEYS.TARGET) TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
         if (selectedId !== null) {
