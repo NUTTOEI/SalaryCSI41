@@ -1,7 +1,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
 
-const STORAGE_KEY = {
+const KEYS = {
     MEMBERS: `memberList_${currentBranch}`,
     TITLE: `branchTitle_${currentBranch}`,
     RATE: `monthlyRate_${currentBranch}`,
@@ -381,7 +381,7 @@ if (searchInput) {
 }
 
 async function loadLatestMembers() {
-    const storedMembers = localStorage.getItem("KEYS.MEMBERS");
+    const storedMembers = localStorage.getItem(KEYS.MEMBERS);
     if (storedMembers) {
         try {
             const parsed = JSON.parse(storedMembers);
@@ -467,9 +467,9 @@ function getMemberStatus(m) {
 initApp();
 
 window.addEventListener("storage", (e) => {
-    if (e.key === "KEYS.MEMBERS" || e.key === "KEYS.TARGET") {
-        if (e.key === "KEYS.MEMBERS" && e.newValue) MEMBERS = JSON.parse(e.newValue);
-        if (e.key === "KEYS.MEMBERS") TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
+    if (e.key === "KEYS.MEMBERS" || e.key === KEYS.TARGET) {
+        if (e.key === KEYS.MEMBERS && e.newValue) MEMBERS = JSON.parse(e.newValue);
+        if (e.key === KEYS.TARGET) TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
         if (selectedId !== null) {
             renderProfile();
         } else {

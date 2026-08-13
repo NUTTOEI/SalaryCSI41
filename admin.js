@@ -1,7 +1,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
 
-const STORAGE_KEY = {
+const KEYS = {
     MEMBERS: `memberList_${currentBranch}`,
     TITLE: `branchTitle_${currentBranch}`,
     RATE: `monthlyRate_${currentBranch}`,
@@ -42,10 +42,10 @@ function safeFmtMoney(val) {
 
 function persistAll() {
     if (typeof MEMBERS !== "undefined") {
-        localStorage.setItem("KEYS.MEMBERS", JSON.stringify(MEMBERS));
+        localStorage.setItem(KEYS.MEMBERS, JSON.stringify(MEMBERS));
     }
     if (typeof TARGET_AMOUNT !== "undefined") {
-        localStorage.setItem("KEYS.TARGET", TARGET_AMOUNT);
+        localStorage.setItem(KEYS.TARGET, TARGET_AMOUNT);
     }
 }
 
@@ -445,7 +445,7 @@ async function loadFromStorage() {
     let loaded = false;
 
     try {
-        const savedMembers = localStorage.getItem("KEYS.MEMBERS");
+        const savedMembers = localStorage.getItem(KEYS.MEMBERS);
         if (savedMembers) {
             const parsed = JSON.parse(savedMembers);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -632,7 +632,7 @@ function loadBranchTitle() {
         titleEl.addEventListener("blur", () => {
             const newTitle = titleEl.textContent.trim() || currentBranch.toUpperCase();
             titleEl.textContent = newTitle;
-            localStorage.setItem("KEYS.TITLE", newTitle);
+            localStorage.setItem(KEYS.TITLE, newTitle);
         });
 
         titleEl.addEventListener("keydown", (e) => {

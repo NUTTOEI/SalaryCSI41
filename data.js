@@ -85,7 +85,7 @@ var DEFAULT_MEMBERS = [
 ];
 
 function getMembersData() {
-    const saved = localStorage.getItem("fund-dashboard-members");
+    const saved = localStorage.getItem("KEYS.MEMBERS");
     if (saved) {
         try { return JSON.parse(saved); } catch (e) { }
     }
@@ -93,7 +93,7 @@ function getMembersData() {
 }
 
 function getTargetData() {
-    const saved = localStorage.getItem("fund-dashboard-target");
+    const saved = localStorage.getItem("KEYS.MEMBERS");
     return saved ? Number(saved) : 4000;
 }
 
