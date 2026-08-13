@@ -1,22 +1,3 @@
-// const urlParams = new URLSearchParams(window.location.search);
-// const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
-
-// const KEYS = {
-//     MEMBERS: `memberList_${currentBranch}`,
-//     TITLE: `branchTitle_${currentBranch}`,
-//     RATE: `monthlyRate_${currentBranch}`,
-//     TARGET: `targetAmount_${currentBranch}`
-// };
-
-// function getMembersList() {
-//     const data = localStorage.getItem(KEYS.MEMBERS);
-//     return data ? JSON.parse(data) : [];
-// }
-
-// function saveMemberList(list) {
-//     localStorage.setItem(KEYS.MEMBERS, JSON.stringify(list));
-// }
-
 // ===== member.js — หน้าค้นหา/โปรไฟล์ของสมาชิก =====
 
 let selectedId = null;
@@ -186,10 +167,7 @@ function renderProfile() {
             amountEl.textContent = safeFmtMoney(0);
             amountEl.className = "balance-amount clear";
         }
-        if (payLink) {
-            payLink.classList.add("hidden");
-            payLink.href = `pay.html?id=${m.id}&type=${collectionMode}&index=${targetIndex}&branch=${currentBranch}`;
-        }
+        if (payLink) payLink.classList.add("hidden");
         if (note) {
             note.className = "status-note paid";
             note.innerHTML = '<i class="ti ti-circle-check"></i> ชำระครบทุกงวดแล้ว';
@@ -337,9 +315,8 @@ function renderMemberDashboard(member) {
 }
 
 function goToPayPage(memberId, type, index) {
-    window.location.href = `pay.html?id=${memberId}&type=${type}&index=${index}&branch=${currentBranch}`;
+    window.location.href = `pay.html?id=${memberId}&type=${type}&index=${index}`;
 }
-
 
 function showHomeScreen() {
     selectedId = null;
@@ -381,7 +358,7 @@ if (searchInput) {
 }
 
 async function loadLatestMembers() {
-    const storedMembers = localStorage.getItem(KEYS.MEMBERS);
+    const storedMembers = localStorage.getItem("fund-dashboard-members");
     if (storedMembers) {
         try {
             const parsed = JSON.parse(storedMembers);
@@ -467,9 +444,9 @@ function getMemberStatus(m) {
 initApp();
 
 window.addEventListener("storage", (e) => {
-    if (e.key === KEYS.MEMBERS || e.key === KEYS.TARGET) {
-        if (e.key === KEYS.MEMBERS && e.newValue) MEMBERS = JSON.parse(e.newValue);
-        if (e.key === KEYS.TARGET) TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
+    if (e.key === "fund-dashboard-members" || e.key === "fund-dashboard-target") {
+        if (e.key === "fund-dashboard-members" && e.newValue) MEMBERS = JSON.parse(e.newValue);
+        if (e.key === "fund-dashboard-target") TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
         if (selectedId !== null) {
             renderProfile();
         } else {

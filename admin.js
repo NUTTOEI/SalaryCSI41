@@ -1,23 +1,3 @@
-// const urlParams = new URLSearchParams(window.location.search);
-// const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
-
-// const KEYS = {
-//     MEMBERS: `memberList_${currentBranch}`,
-//     TITLE: `branchTitle_${currentBranch}`,
-//     RATE: `monthlyRate_${currentBranch}`,
-//     TARGET: `targetAmount_${currentBranch}`
-// };
-
-// function getMembersList() {
-//     const data = localStorage.getItem(KEYS.MEMBERS);
-//     return data ? JSON.parse(data) : [];
-// }
-
-// function saveMemberList(list) {
-//     localStorage.setItem(KEYS.MEMBERS, JSON.stringify(list));
-// }
-
-
 if (typeof MEMBERS === "undefined") MEMBERS = [];
 if (typeof TARGET_AMOUNT === "undefined") TARGET_AMOUNT = 0;
 
@@ -42,10 +22,10 @@ function safeFmtMoney(val) {
 
 function persistAll() {
     if (typeof MEMBERS !== "undefined") {
-        localStorage.setItem(KEYS.MEMBERS, JSON.stringify(MEMBERS));
+        localStorage.setItem("fund-dashboard-members", JSON.stringify(MEMBERS));
     }
     if (typeof TARGET_AMOUNT !== "undefined") {
-        localStorage.setItem(KEYS.TARGET, TARGET_AMOUNT);
+        localStorage.setItem("fund-dashboard-target", TARGET_AMOUNT);
     }
 }
 
@@ -267,7 +247,7 @@ function renderRow(m, index) {
                 <i class="ti ti-history" style="font-size: 1.2rem;"></i>
             </button>
             
-            <a href="detailmember.html?id=${m.id}&branch=${currentBranch}" title="ดูรายละเอียด" onclick="event.stopPropagation();" style="display:flex; align-items:center; gap:4px; text-decoration: none; background:#EEF0FB; border:1px solid #C7CCEB; border-radius:6px; cursor:pointer; color:#4C5FD5; padding:4px 8px; font-size:12px; font-family:'Kanit'; white-space: nowrap;">
+            <a href="detailmember.html?id=${m.id}" title="ดูรายละเอียด" onclick="event.stopPropagation();" style="display:flex; align-items:center; gap:4px; text-decoration: none; background:#EEF0FB; border:1px solid #C7CCEB; border-radius:6px; cursor:pointer; color:#4C5FD5; padding:4px 8px; font-size:12px; font-family:'Kanit'; white-space: nowrap;">
                 <i class="ti ti-calendar-event" style="font-size: 1.1rem;"></i> รายรายละเอียด
             </a>
 
@@ -445,7 +425,7 @@ async function loadFromStorage() {
     let loaded = false;
 
     try {
-        const savedMembers = localStorage.getItem(KEYS.MEMBERS);
+        const savedMembers = localStorage.getItem("fund-dashboard-members");
         if (savedMembers) {
             const parsed = JSON.parse(savedMembers);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -619,24 +599,26 @@ if (document.readyState === "loading") {
 function loadBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
-    const savedTitle = localStorage.getItem(KEYS.TITLE);
-    titleEl.textContent = savedTitle || currentBranch.toUpperCase();
+    const savedTitle = localStorage.getItem("fund-dashboard-branch-title");
+    if (savedTitle) {
+        titleEl.textContent = savedTitle;
+    }
 }
 
     function setupBranchTitle() {
-        const titleEl = document.getElementById("branch-title");
-        if (!titleEl) return;
+    const titleEl = document.getElementById("branch-title");
+    if (!titleEl) return;
 
-        loadBranchTitle();
+    loadBranchTitle();
 
-        titleEl.addEventListener("blur", () => {
-            const newTitle = titleEl.textContent.trim() || currentBranch.toUpperCase();
-            titleEl.textContent = newTitle;
-            localStorage.setItem(KEYS.TITLE, newTitle);
-        });
+    titleEl.addEventListener("blur", () => {
+        const newTitle = titleEl.textContent.trim() || "Comsci 41";
+        titleEl.textContent = newTitle;
+        localStorage.setItem("fund-dashboard-branch-title", newTitle);
+    });
 
-        titleEl.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
+    titleEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
             e.preventDefault();
             titleEl.blur();
         }

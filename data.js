@@ -1,14 +1,3 @@
-const urlParams = new URLSearchParams(window.location.search);
-const currentBranch = (urlParams.get('branch') || 'comsci41').toLowerCase();
-
-// 🟢 ประกาศ KEYS ไว้เป็นตัวแปรกลางที่จุดเดียว
-const KEYS = {
-    MEMBERS: `memberList_${currentBranch}`,
-    TITLE: `branchTitle_${currentBranch}`,
-    RATE: `monthlyRate_${currentBranch}`,
-    TARGET: `targetAmount_${currentBranch}`
-};
-
 const CURRENT_YEAR = new Date().getFullYear();
 
 const THAI_MONTHS = [
@@ -96,7 +85,7 @@ var DEFAULT_MEMBERS = [
 ];
 
 function getMembersData() {
-    const saved = localStorage.getItem(KEYS.MEMBERS);
+    const saved = localStorage.getItem("fund-dashboard-members");
     if (saved) {
         try { return JSON.parse(saved); } catch (e) { }
     }
@@ -104,7 +93,7 @@ function getMembersData() {
 }
 
 function getTargetData() {
-    const saved = localStorage.getItem(KEYS.TARGET);
+    const saved = localStorage.getItem("fund-dashboard-target");
     return saved ? Number(saved) : 4000;
 }
 
@@ -113,8 +102,8 @@ var TARGET_AMOUNT = getTargetData();
 
 function persistAll() {
     try {
-        localStorage.setItem(KEYS.MEMBERS, JSON.stringify(MEMBERS));
-        localStorage.setItem(KEYS.TARGET, String(TARGET_AMOUNT));
+        localStorage.setItem("fund-dashboard-members", JSON.stringify(MEMBERS));
+        localStorage.setItem("fund-dashboard-target", String(TARGET_AMOUNT));
     } catch (e) {
         console.log("บันทึก localStorage ไม่ได้:", e);
     }
