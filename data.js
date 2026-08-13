@@ -85,7 +85,7 @@ var DEFAULT_MEMBERS = [
 ];
 
 function getMembersData() {
-    const saved = localStorage.getItem("KEYS.MEMBERS");
+    const saved = localStorage.getItem(KEYS.MEMBERS);
     if (saved) {
         try { return JSON.parse(saved); } catch (e) { }
     }
@@ -93,7 +93,7 @@ function getMembersData() {
 }
 
 function getTargetData() {
-    const saved = localStorage.getItem("KEYS.MEMBERS");
+    const saved = localStorage.getItem(KEYS.MEMBERS);
     return saved ? Number(saved) : 4000;
 }
 
@@ -102,8 +102,8 @@ var TARGET_AMOUNT = getTargetData();
 
 function persistAll() {
     try {
-        localStorage.setItem("fund-dashboard-members", JSON.stringify(MEMBERS));
-        localStorage.setItem("fund-dashboard-target", String(TARGET_AMOUNT));
+        localStorage.setItem("KEYS.MEMBERS", JSON.stringify(MEMBERS));
+        localStorage.setItem("KEYS.TARGET", String(TARGET_AMOUNT));
     } catch (e) {
         console.log("บันทึก localStorage ไม่ได้:", e);
     }

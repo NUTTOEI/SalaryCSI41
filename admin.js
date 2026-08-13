@@ -9,12 +9,12 @@ const KEYS = {
 };
 
 function getMembersList() {
-    const data = localStorage.getItem(STORAGE_KEY.MEMBERS);
+    const data = localStorage.getItem(KEYS.MEMBERS);
     return data ? JSON.parse(data) : [];
 }
 
 function saveMemberList(list) {
-    localStorage.setItem(STORAGE_KEY.MEMBERS, JSON.stringify(list));
+    localStorage.setItem(KEYS.MEMBERS, JSON.stringify(list));
 }
 
 
@@ -619,7 +619,7 @@ if (document.readyState === "loading") {
 function loadBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
-    const savedTitle = localStorage.getItem("KEYS.TITLE");
+    const savedTitle = localStorage.getItem(KEYS.TITLE);
     titleEl.textContent = savedTitle || currentBranch.toUpperCase();
 }
 
