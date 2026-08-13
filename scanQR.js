@@ -67,21 +67,21 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         }
 
         // 🟢 5. ตรวจสอบยอดเงิน (ยืดหยุ่นรองรับ MyMo และธนาคารอื่น)
-        const foundAmounts = [];
-        const regex = /(\d{1,3}(?:,\d{3})*|\d+)[\.\,\s]+(\d{2})/g;
+        const validAmounts = [];
+        const regex = /\b(\d{1,3}(?:,\d{3})*|\d{1,6})\.(\d{2})\b/g;
         let match;
 
         while ((match = regex.exec(text)) !== null) {
-            const val = parseFloat(match[1].replace(/,/g, '') + '.' + match[2]);
-            if (val > 0) {
-                foundAmounts.push(val);
+            const numVal = parseFloat(match[1].replace(/,/g, '') + '.' + match[2]);
+            if (numVal > 0 && numVal < 1000000) {
+                validAmounts.push(numVal);
             }
         }
 
         let actualAmount = null;
 
-        if (foundAmounts.length > 0) {
-            actualAmount = foundAmounts.includes(expectedAmount) ? expectedAmount : foundAmounts[0];
+        if (validAmounts.length > 0) {
+            actualAmount = validAmounts.includes(expectedAmount) ? expectedAmount : validAmounts[0];
         }
 
         if (!actualAmount) {

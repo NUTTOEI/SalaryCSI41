@@ -387,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
             formData.append("slip_image", file);
             formData.append("expected_amount", expectedAmount);
 
-            const response = await fetch("http://localhost:3000/verify-slip", {
+            const response = await fetch('https://salarycsi41.onrender.com/verify-slip', {
                 method: "POST",
                 body: formData
             });
