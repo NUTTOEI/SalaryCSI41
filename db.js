@@ -8,7 +8,7 @@ const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD || 'GOGOH1103',
     database: process.env.DB_NAME || 'fund_dashboard',
     waitForConnections: true,
     connectionLimit: 10,
@@ -19,14 +19,21 @@ const pool = mysql.createPool({
 
 // ping ตอนสตาร์ทเซิร์ฟเวอร์ เพื่อ fail-fast ถ้าต่อ MySQL ไม่ได้ (จะได้เห็น error ทันที ไม่ใช่หน้าว่างเงียบๆ)
 async function testConnection() {
+    const safeHost = process.env.DB_HOST || 'localhost';
+    const safeUser = process.env.DB_USER || 'root';
+    const safeDb = process.env.DB_NAME || 'fund_dashboard';
+
     try {
         const conn = await pool.getConnection();
         await conn.ping();
         conn.release();
-        console.log('✅ เชื่อมต่อ MySQL สำเร็จ');
+        console.log(`✅ เชื่อมต่อ MySQL สำเร็จ (host=${safeHost} db=${safeDb} user=${safeUser})`);
     } catch (err) {
-        console.error('❌ เชื่อมต่อ MySQL ไม่สำเร็จ:', err.message);
-        console.error('   ตรวจสอบ DB_HOST / DB_USER / DB_PASSWORD / DB_NAME ใน environment variables');
+        console.error(`❌ เชื่อมต่อ MySQL ไม่สำเร็จ (host=${safeHost} db=${safeDb} user=${safeUser})`);
+        console.error('   code:', err.code || '(ไม่มี)');
+        console.error('   errno:', err.errno || '(ไม่มี)');
+        console.error('   message:', err.message || '(ว่างเปล่า — ดู code/errno ด้านบนแทน)');
+        console.error('   ตรวจสอบ DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME ใน environment variables');
     }
 }
 
