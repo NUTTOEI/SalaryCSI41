@@ -358,26 +358,16 @@ if (searchInput) {
 }
 
 async function loadLatestMembers() {
-    const storedMembers = localStorage.getItem("fund-dashboard-members");
-    if (storedMembers) {
-        try {
-            const parsed = JSON.parse(storedMembers);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        } catch (e) {
-            console.error("localStorage data corrupt", e);
-        }
-    }
-
     try {
-        const response = await fetch("data.json", { cache: "no-store" });
+        const response = await fetch("/api/members", { cache: "no-store" });
         if (response.ok) {
             const data = await response.json();
             if (Array.isArray(data) && data.length > 0) return data;
         }
     } catch (e) {
-        console.log("อ่าน data.json ไม่สำเร็จ");
+        console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ MySQL ได้", e);
     }
-    return typeof DEFAULT_MEMBERS !== "undefined" ? DEFAULT_MEMBERS : [];
+    return [];
 }
 
 async function initApp() {
@@ -465,15 +455,12 @@ window.addEventListener("storage", (e) => {
     }
 });
 
-window.addEventListener("pageshow", async (event) => {
-    if (event.persisted) {
+window.addEventListener("pageshow", async () => {
         MEMBERS = await loadLatestMembers();
-        TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
         if (selectedId !== null) {
             renderProfile();
         } else {
             renderHomeSummary();
             renderUserList();
         }
-    }
 });

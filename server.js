@@ -20,21 +20,18 @@ function safeFmtMoney(val) {
     return typeof fmtMoney === "function" ? fmtMoney(val) : `฿${Number(val || 0).toLocaleString()}`;
 }
 
-
 let selectedAdminMonth = new Date().getMonth();
-
 let state = { query: "", filter: "all", sort: "index", ratePreview: 100 };
 
 function isMemberPaidCurrent(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
     if (mode === "month") {
-        const currentMonth = new Date().getMonth(); // ดึงเดือนปัจจุบัน (0 = ม.ค., 7 = ส.ค.)
+        const currentMonth = new Date().getMonth();
         const paidMonths = m.paidMonths || Array(12).fill(false);
         return Boolean(paidMonths[currentMonth]);
     } else {
         const activeWeek = Number(localStorage.getItem("fund-dashboard-active-week")) || 0;
-        const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
-        const paidWeeks = m.paidWeeks || Array(totalWeeks).fill(false);
+        const paidWeeks = m.paidWeeks || Array(52).fill(false);
         return Boolean(paidWeeks[activeWeek]);
     }
 }
@@ -63,7 +60,7 @@ function computeStats() {
 function sortedFilteredMembers() {
     let items = MEMBERS.filter(m => {
         const isPaid = isMemberPaidCurrent(m);
-        const q = m.name ? m.name.includes(state.query.trim()) : false;
+        const q = m.name ? m.name.toLowerCase().includes(state.query.trim().toLowerCase()) : false;
         const f = state.filter === "all" ? true : state.filter === "paid" ? isPaid : !isPaid;
         return q && f;
     });
@@ -86,7 +83,7 @@ async function togglePaid(id) {
         body: JSON.stringify({ memberId: id, mode, monthIndex: currentMonth, weekIndex: activeWeek })
     });
 
-    await loadFromStorage(); // ดึงข้อมูลใหม่มาแสดงผล
+    await loadFromStorage();
 }
 
 function openResetModal() {
@@ -99,7 +96,6 @@ function closeResetModal() {
     if (modal) modal.style.display = "none";
 }
 
-// ===== ฟังก์ชันรีเซ็ตระบบจ่ายเงินทั้งหมด =====
 async function resetAllPayments() {
     await fetch("/api/admin/reset", { method: "POST" });
     await loadFromStorage();
@@ -114,10 +110,15 @@ function setRatePreview(v) {
     state.ratePreview = isFinite(n) && n >= 0 ? n : state.ratePreview;
 }
 
-function applyRateToAll() {
-    MEMBERS.forEach(m => { m.amount = state.ratePreview; });
-    persistAll();
-    render();
+async function applyRateToAll() {
+    for (let m of MEMBERS) {
+        await fetch(`/api/admin/members/${m.id}/amount`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: state.ratePreview })
+        });
+    }
+    await loadFromStorage();
 }
 
 async function addMember(name) {
@@ -198,7 +199,7 @@ function renderRow(m, index) {
             </button>
             
             <a href="detailmember.html?id=${m.id}" title="ดูรายละเอียด" onclick="event.stopPropagation();" style="display:flex; align-items:center; gap:4px; text-decoration: none; background:#EEF0FB; border:1px solid #C7CCEB; border-radius:6px; cursor:pointer; color:#4C5FD5; padding:4px 8px; font-size:12px; font-family:'Kanit'; white-space: nowrap;">
-                <i class="ti ti-calendar-event" style="font-size: 1.1rem;"></i> รายรายละเอียด
+                <i class="ti ti-calendar-event" style="font-size: 1.1rem;"></i> รายละเอียด
             </a>
 
             <button class="delete-btn" data-delete-id="${m.id}" title="ลบสมาชิก" style="background:none; border:none; cursor:pointer; color:#ff5252; padding:4px;">
@@ -221,15 +222,18 @@ function startEditAmount(el) {
     }
 }
 
-function saveEditAmount(input) {
+async function saveEditAmount(input) {
     const id = Number(input.getAttribute("data-amount-id"));
     const m = MEMBERS.find(x => x.id === id);
     if (!m) return;
     const n = Number(input.value);
     if (isFinite(n) && n >= 0) {
-        m.amount = n;
-        persistAll();
-        render();
+        await fetch(`/api/admin/members/${id}/amount`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: n })
+        });
+        await loadFromStorage();
     }
 }
 
@@ -298,23 +302,6 @@ document.addEventListener("focusout", (e) => {
     if (input) saveEditAmount(input);
 });
 
-document.addEventListener("keydown", (e) => {
-    const targetModal = document.getElementById("target-modal");
-    const resetModal = document.getElementById("reset-modal");
-
-    if (e.key === "Escape") {
-        closeTargetModal();
-        closeResetModal();
-    }
-
-    if (targetModal && targetModal.style.display === "flex") {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            saveTargetAmount();
-        }
-    }
-});
-
 if (document.getElementById("search-input")) {
     document.getElementById("search-input").addEventListener("input", (e) => setQuery(e.target.value));
 }
@@ -376,6 +363,7 @@ async function loadFromStorage() {
         const response = await fetch("/api/members", { cache: "no-store" });
         if (response.ok) {
             MEMBERS = await response.json();
+            render();
         }
     } catch (e) {
         console.error("ดึงข้อมูลจาก MySQL ล้มเหลว:", e);
@@ -409,7 +397,7 @@ function saveTargetAmount() {
         const num = Number(input.value);
         if (isFinite(num) && num > 0) {
             TARGET_AMOUNT = num;
-            persistAll();
+            localStorage.setItem("fund-dashboard-target", num);
             render();
             closeTargetModal();
         } else {
@@ -427,27 +415,8 @@ if (saveTargetBtn) {
     saveTargetBtn.addEventListener("click", saveTargetAmount);
 }
 
-document.addEventListener("keydown", (e) => {
-    const modal = document.getElementById("target-modal");
-    if (modal && modal.style.display === "flex") {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            saveTargetAmount();
-        } else if (e.key === "Escape") {
-            closeTargetModal();
-        }
-    }
-});
-
 function getCollectionMode() {
     return localStorage.getItem("fund-dashboard-mode") || "month";
-}
-
-function setCollectionMode(mode) {
-    if (mode === "week") return;
-    localStorage.setItem("fund-dashboard-mode", mode);
-    updateModeUI(mode);
-    render();
 }
 
 function updateModeUI(mode) {
@@ -467,8 +436,6 @@ function initAdminApp() {
     setupBranchTitle();
 }
 
-
-
 function getMemberStatus(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
 
@@ -477,40 +444,17 @@ function getMemberStatus(m) {
         const paidMonths = m.paidMonths || Array(12).fill(false);
 
         if (paidMonths[currentMonth]) {
-            return {
-                status: "paid",
-                text: "จ่ายแล้ว",
-                class: "paid",
-                subText: "ชำระเรียบร้อย"
-            };
+            return { status: "paid", text: "จ่ายแล้ว", class: "paid", subText: "ชำระเรียบร้อย" };
         }
-
-        return {
-            status: "unpaid",
-            text: "ค้างชำระ",
-            class: "unpaid",
-            subText: `ยอดชำระประจำเดือน ${safeFmtMoney(m.amount)} บาท`
-        };
+        return { status: "unpaid", text: "ค้างชำระ", class: "unpaid", subText: `ยอดชำระประจำเดือน ${safeFmtMoney(m.amount)} บาท` };
     } else {
-        const activeWeek = typeof getActiveWeekIndex === "function" ? getActiveWeekIndex() : Number(localStorage.getItem("fund-dashboard-active-week")) || 0;
-        const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
-        const paidWeeks = m.paidWeeks || Array(totalWeeks).fill(false);
+        const activeWeek = typeof getActiveWeekIndex === "function" ? getActiveWeekIndex() : 0;
+        const paidWeeks = m.paidWeeks || Array(52).fill(false);
 
         if (paidWeeks[activeWeek]) {
-            return {
-                status: "paid",
-                text: "จ่ายแล้ว",
-                class: "paid",
-                subText: "ชำระเรียบร้อย"
-            };
+            return { status: "paid", text: "จ่ายแล้ว", class: "paid", subText: "ชำระเรียบร้อย" };
         }
-
-        return {
-            status: "unpaid",
-            text: "ค้างชำระ",
-            class: "unpaid",
-            subText: `ยอดชำระประจำสัปดาห์ ${safeFmtMoney(m.amount)} บาท`
-        };
+        return { status: "unpaid", text: "ค้างชำระ", class: "unpaid", subText: `ยอดชำระประจำสัปดาห์ ${safeFmtMoney(m.amount)} บาท` };
     }
 }
 
@@ -529,7 +473,7 @@ function loadBranchTitle() {
     }
 }
 
-    function setupBranchTitle() {
+function setupBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
 
