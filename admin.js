@@ -376,6 +376,7 @@ async function loadFromStorage() {
         const response = await fetch("/api/members", { cache: "no-store" });
         if (response.ok) {
             MEMBERS = await response.json();
+            render()
         }
     } catch (e) {
         console.error("ดึงข้อมูลจาก MySQL ล้มเหลว:", e);

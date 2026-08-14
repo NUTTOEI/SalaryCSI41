@@ -1,0 +1,1 @@
+SELECT * FROM my_database.members;
