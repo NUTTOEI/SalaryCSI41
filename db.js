@@ -5,11 +5,11 @@ require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
+    host: process.env.DB_HOST || 'metro.proxy.rlwy.net',
+    port: process.env.DB_PORT || 24417,
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'GOGOH1103',
-    database: process.env.DB_NAME || 'fund_dashboard',
+    password: process.env.DB_PASSWORD || 'KRHJNTMmlMjZhCwYQPfZQYtIjYPrlkAW',
+    database: process.env.DB_NAME || 'railway',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -19,9 +19,9 @@ const pool = mysql.createPool({
 
 // ping ตอนสตาร์ทเซิร์ฟเวอร์ เพื่อ fail-fast ถ้าต่อ MySQL ไม่ได้ (จะได้เห็น error ทันที ไม่ใช่หน้าว่างเงียบๆ)
 async function testConnection() {
-    const safeHost = process.env.DB_HOST || 'localhost';
+    const safeHost = process.env.DB_HOST || 'metro.proxy.rlwy.net';
     const safeUser = process.env.DB_USER || 'root';
-    const safeDb = process.env.DB_NAME || 'fund_dashboard';
+    const safeDb = process.env.DB_NAME || 'railway';
 
     try {
         const conn = await pool.getConnection();
