@@ -114,10 +114,15 @@ function setRatePreview(v) {
     state.ratePreview = isFinite(n) && n >= 0 ? n : state.ratePreview;
 }
 
-function applyRateToAll() {
-    MEMBERS.forEach(m => { m.amount = state.ratePreview; });
-    persistAll();
-    render();
+async function applyRateToAll() {
+    for (const m of MEMBERS) {
+        await fetch(`/api/admin/members/${m.id}/amount`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: state.ratePreview })
+        });
+    }
+    await loadFromStorage();
 }
 
 async function addMember(name) {
@@ -410,7 +415,7 @@ function saveTargetAmount() {
         const num = Number(input.value);
         if (isFinite(num) && num > 0) {
             TARGET_AMOUNT = num;
-            persistAll();
+            localStorage.setItem("fund-dashboard-target", num);
             render();
             closeTargetModal();
         } else {

@@ -1,0 +1,33 @@
+// db.js — เชื่อมต่อ MySQL แบบ connection pool (ใช้ mysql2/promise)
+// อ่านค่า config จาก environment variables (ตั้งค่าใน .env หรือใน Render > Environment)
+
+require('dotenv').config();
+const mysql = require('mysql2/promise');
+
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'fund_dashboard',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    // ตัวเลือกนี้ทำให้ mysql2 คืนค่าคอลัมน์ชนิด JSON เป็น object/array ให้อัตโนมัติ
+    // (ไม่ต้อง JSON.parse เองในโค้ดฝั่ง route)
+});
+
+// ping ตอนสตาร์ทเซิร์ฟเวอร์ เพื่อ fail-fast ถ้าต่อ MySQL ไม่ได้ (จะได้เห็น error ทันที ไม่ใช่หน้าว่างเงียบๆ)
+async function testConnection() {
+    try {
+        const conn = await pool.getConnection();
+        await conn.ping();
+        conn.release();
+        console.log('✅ เชื่อมต่อ MySQL สำเร็จ');
+    } catch (err) {
+        console.error('❌ เชื่อมต่อ MySQL ไม่สำเร็จ:', err.message);
+        console.error('   ตรวจสอบ DB_HOST / DB_USER / DB_PASSWORD / DB_NAME ใน environment variables');
+    }
+}
+
+module.exports = { pool, testConnection };

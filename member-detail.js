@@ -25,25 +25,16 @@ async function loadMemberData() {
         return;
     }
 
-    let loadedFromStorage = false;
-    const saved = localStorage.getItem("fund-dashboard-members");
-    if (saved) {
-        try {
-            allMembers = JSON.parse(saved);
-            loadedFromStorage = true;
-        } catch(e) { }
-    }
-    
-    if (!loadedFromStorage) {
-        try {
-            const response = await fetch("data.json", { cache: "no-store" });
-            if (response.ok) {
-                const data = await response.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    allMembers = data;
-                }
+    try {
+        const response = await fetch("/api/members", { cache: "no-store" });
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                allMembers = data;
             }
-        } catch (e) { }
+        }
+    } catch (e) {
+        console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ MySQL ได้:", e);
     }
 
     currentMember = allMembers.find(m => m.id === id);
@@ -204,66 +195,35 @@ function renderMemberDetail() {
 
 
 
-function toggleMonthPayment(monthIndex, rate) {
-    if (!currentMember.paidMonths) currentMember.paidMonths = Array(12).fill(false);
-
-    const newStatus = !Boolean(currentMember.paidMonths[monthIndex]);
-    currentMember.paidMonths[monthIndex] = !Boolean(currentMember.paidMonths[monthIndex]);
-
-    currentMember.paid = currentMember.paidMonths.every(Boolean);
-
-    if (!currentMember.history) currentMember.history = [];
-    const nowDate = new Date().toLocaleDateString("th-TH");
-
-    currentMember.history.push({
-        date: nowDate,
-        method: newStatus ? "Admin บันทึกชำระเงิน" : "Admin ยกเลิกการชำระ",
-        amount: newStatus ? rate : -rate,
-        months: [monthIndex]
+async function toggleMonthPayment(monthIndex, rate) {
+    await fetch("/api/admin/toggle-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: currentMember.id, mode: "month", monthIndex })
     });
-
-    saveAllMembersToStorage();
-    renderMemberDetail();
+    await reloadCurrentMember();
 }
 
-function toggleWeekPayment(weekIndex, rate) {
-    const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
-    if (!currentMember.paidWeeks) currentMember.paidWeeks = Array(totalWeeks).fill(false);
-
-    const currentStatus = Boolean(currentMember.paidWeeks[weekIndex]);
-    const newStatus = !currentStatus;
-    currentMember.paidWeeks[weekIndex] = newStatus;
-
-    currentMember.paid = currentMember.paidWeeks.every(Boolean);
-
-    if (!currentMember.history) currentMember.history = [];
-    const nowDate = new Date().toLocaleDateString("th-TH");
-
-    currentMember.history.push({
-        date: nowDate,
-        method: newStatus ? "Admin บันทึกชำระเงิน" : "Admin ยกเลิกการชำระ",
-        amount: newStatus ? rate : -rate,
-        weeks: [weekIndex]
+async function toggleWeekPayment(weekIndex, rate) {
+    await fetch("/api/admin/toggle-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: currentMember.id, mode: "week", weekIndex })
     });
-
-    saveAllMembersToStorage();
-    renderMemberDetail();
+    await reloadCurrentMember();
 }
 
-function saveAllMembersToStorage() {
-    const idx = allMembers.findIndex(m => m.id === currentMember.id);
-    if (idx !== -1) {
-        allMembers[idx] = currentMember;
-        localStorage.setItem("fund-dashboard-members", JSON.stringify(allMembers));
-        fetch("save.php", {
-            method: "POST",
-            headers: { "Content-Type" : "application/json" },
-            body: JSON.stringify(allMembers, null, 2)
-        })
-        .then(r => r.text())
-        .then(t => console.log("บันทึกไปยังเซิร์ฟเรียบร้อย:", t))
-        .catch(e => console.log("ไม่สามารถบันทึกลงเซิร์ฟเวอร์ได้:", e));
+async function reloadCurrentMember() {
+    try {
+        const response = await fetch("/api/members", { cache: "no-store" });
+        if (response.ok) {
+            allMembers = await response.json();
+            currentMember = allMembers.find(m => m.id === currentMember.id);
+        }
+    } catch (e) {
+        console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ MySQL ได้:", e);
     }
+    renderMemberDetail();
 }
 
 document.addEventListener("DOMContentLoaded", loadMemberData);
