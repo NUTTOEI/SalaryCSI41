@@ -642,7 +642,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     window.location.href = `member.html?id=${member.id}`;
                 }, 2000);
             } else {
-                alert("ไม่สามารถบันทึดข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+                alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
             }
         } catch (err) {
             console.error("❌ บันทึกไม่สำเร็จ:", err);
