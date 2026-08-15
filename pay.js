@@ -375,6 +375,15 @@
 //     document.getElementById("confirm-cash")?.addEventListener("click", () => markPending("เงินสด"));
 // });
 
+function getBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById('qr-name')) {
         document.getElementById('qr-name').textContent = (typeof ROOM !== 'undefined' && ROOM.promptpayName)
@@ -563,7 +572,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
 
-            const formData = new formData();
+            const formData = new FormData();
             formData.append("slip_image", slipInput.files[0]);
             formData.append("expected_amount", payAmount);
 
@@ -589,7 +598,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         let slipBase64 = null;
-        if (method === "Promptpay") {
+        if (method === "PromptPay") {
             const slipInput = document.getElementById("slip-file");
             if (slipInput && slipInput.files.length > 0) {
                 try {
@@ -603,7 +612,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const nowDate = new Date().toLocaleDateString("th-TH");
 
         if (!member.paidMonths) member.paidMonths = Array(12).fill(false);
-        selectedMOnths.forEach(mIdx => member.paidMonths[mIdx] = true);
+        selectedMonths.forEach(mIdx => member.paidMonths[mIdx] = true);
 
         if (!member.history) member.history = [];
         member.history.push({
