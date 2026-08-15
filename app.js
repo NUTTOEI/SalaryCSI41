@@ -52,7 +52,7 @@ function rowToMember(row) {
 // GET /api/members — ที่ admin.js / member.js / pay.js เรียกทุกครั้งตอนโหลดหน้า
 app.get('/api/members', async (req, res) => {
     const { id } = req.params;
-    const { paidMonths, paidWeeks, history } = req,body;
+    const { paidMonths, paidWeeks, history } = req.body;
 
     try {
        await db.query(

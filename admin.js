@@ -433,7 +433,7 @@ async function saveTargetAmount() {
             localStorage.setItem('targetAmount', targetValue);
             alert('บันทึกยอดเป้าหมายเรียบร้อย');
         } else {
-            alert('บันทึกข้อมูลไม่่สำเร็จ');
+            alert('บันทึกข้อมูลไม่สำเร็จ');
         }
     } catch (error) {
         console.error('Error saving target:', error);
