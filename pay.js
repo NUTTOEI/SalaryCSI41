@@ -281,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
         panelCash?.classList.remove("step-visible");
     }
 
-    function markPending(method) {
+    async function markPending(method) {
         const isMonthMode = COLLECTION_MODE === "month";
         const hasSelection = isMonthMode ? selectedMonths.length > 0 : selectedWeeks.length > 0;
 
@@ -330,9 +330,11 @@ document.addEventListener("DOMContentLoaded", () => {
             MEMBERS[idx] = member;
         }
 
+        // 1. บันทึกลง LocalStorage ตามเดิม
         window.MEMBERS = MEMBERS;
         localStorage.setItem("fund-dashboard-members", JSON.stringify(MEMBERS));
 
+        // 🟢 2. เพิ่มส่วนนี้: ยิงข้อมูลไปบันทึกลง MySQL Database บน Railway
         try {
             await fetch(`/api/members/${member.id}`, {
                 method: "PUT",
@@ -343,9 +345,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     history: member.history
                 })
             });
-            console.log("✅ อัปเดตข้อมูลสำเร็จ");
+            console.log("✅ อัปเดตฐานข้อมูล MySQL สำเร็จ");
         } catch (err) {
-            console.error("❌ อัปเดตข้อมูลไม่สำเร็จ", err);
+            console.error("❌ ไม่สามารถอัปเดตลง MySQL ได้:", err);
         }
 
         alert("บันทึกการชำระเงินเรียบร้อยแล้ว!");
