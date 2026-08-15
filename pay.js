@@ -391,23 +391,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(location.search);
     const memberId = Number(params.get("id"));
 
-    // โหลดจาก /api/members (MySQL) แทน localStorage เพื่อได้ข้อมูลปัจจุบัน
+    // โหลดข้อมูลสมาชิกจาก MySQL API
     let MEMBERS = [];
     try {
         const response = await fetch("/api/members", { cache: "no-store" });
         if (response.ok) {
             MEMBERS = await response.json();
-            console.log(`✅ โหลดข้อมูลสมาชิก ${MEMBERS.length} คนจาก API`);
-        } else {
-            console.error(`❌ /api/members error: HTTP ${response.status}`);
         }
     } catch (e) {
         console.error("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:", e);
     }
     
-    // Fallback ถ้า API ไม่ได้
     if (MEMBERS.length === 0) {
-        console.warn("⚠️ API ล้มเหลว ลองใช้ localStorage/getMembersData");
         const storedMembers = localStorage.getItem("fund-dashboard-members");
         MEMBERS = storedMembers ? JSON.parse(storedMembers) : (typeof getMembersData === 'function' ? getMembersData() : []);
     }
@@ -425,35 +420,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         || Number(localStorage.getItem("fund-dashboard-rate"))
         || 100;
 
-    function getCurrentWeekIndex() {
-        if (typeof WEEKS_LIST === 'undefined' || !Array.isArray(WEEKS_LIST)) return -1;
-        const now = new Date();
-        
-        return WEEKS_LIST.findIndex(w => {
-            if (!w.startDate || !w.endDate) return false;
-            const start = new Date(w.startDate);
-            const end = new Date(w.endDate);
-            end.setHours(23, 59, 59, 999);
-            return now >= start && now <= end;
-        });
-    }
-
-    const now = new Date();
-    if (COLLECTION_MODE === "month") {
-        const currentMonthIdx = now.getMonth();
-        member.paid = Boolean(member.paidMonths && member.paidMonths[currentMonthIdx]);
-    } else {
-        const currentWeekIdx = getCurrentWeekIndex();
-        if (currentWeekIdx !== -1) {
-            member.paid = Boolean(member.paidWeeks && member.paidWeeks[currentWeekIdx]);
-        }
-    }
-
     if (document.getElementById("rate-display")) document.getElementById("rate-display").textContent = rate;
     if (document.getElementById("who-name")) document.getElementById("who-name").textContent = member.name;
-
-    const remainingAmount = member.paid ? 0 : rate;
-    if (document.getElementById("who-amount")) document.getElementById("who-amount").textContent = "฿" + remainingAmount.toLocaleString();
 
     if (COLLECTION_MODE === "month") {
         renderMonthModeUI();
@@ -495,144 +463,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         }).join("");
     }
 
-    window.toggleMonthSelection = async function(index) {
-        // บันทึก toggle เดือนไปยัง MySQL ผ่าน /api/admin/toggle-paid
-        try {
-            const response = await fetch("/api/admin/toggle-paid", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    memberId: member.id,
-                    mode: "month",
-                    monthIndex: index
-                })
-            });
-            
-            if (response.ok) {
-                console.log(`✅ บันทึกเดือน ${THAI_MONTHS[index]} สำเร็จ`);
-                
-                // โหลดข้อมูลใหม่จาก API เพื่อให้ updated
-                const membersResponse = await fetch("/api/members", { cache: "no-store" });
-                if (membersResponse.ok) {
-                    const updatedMembers = await membersResponse.json();
-                    const updatedMember = updatedMembers.find(m => m.id === member.id);
-                    if (updatedMember) {
-                        // อัปเดต member object ให้เป็น state ปัจจุบัน
-                        member.paidMonths = updatedMember.paidMonths;
-                        member.history = updatedMember.history;
-                        
-                        // re-render UI
-                        renderMonthModeUI();
-                    }
-                }
-            } else {
-                console.error(`❌ บันทึกไม่สำเร็จ: HTTP ${response.status}`);
-                alert("ไม่สามารถบันทึกได้ กรุณาลองใหม่อีกครั้ง");
-            }
-        } catch (e) {
-            console.error("❌ เชื่อมต่อ API ไม่ได้:", e);
-            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+    // คลิกเลือกเดือน -> ไฮไลต์ปุ่ม + เปิดเมนูเลือกวิธีชำระเงิน (ยังไม่อัปเดต DB)
+    window.toggleMonthSelection = function(index) {
+        if (selectedMonths.includes(index)) {
+            selectedMonths = selectedMonths.filter(m => m !== index);
+        } else {
+            selectedMonths.push(index);
         }
-    };
 
-    function renderWeekModeUI() {
-        injectMonthDropdown();
-        renderWeekGrid();
-    }
-
-    function injectMonthDropdown() {
-        const group = document.getElementById("month-selection-group");
-        if (!group || document.getElementById("pay-month-select")) return;
-        
-        const optionsHTML = THAI_MONTHS.map((m, idx) =>
-            `<option value="${idx}" ${idx === selectedMonthIndex ? 'selected' : ''}>${m} (${CURRENT_YEAR})</option>`
-        ).join("");
-
-        group.innerHTML = `
-            <div class="month-select-wrapper">
-                <label for="pay-month-select"><i class="ti ti-calendar"></i> เลือกประจำเดือนที่จะจ่ายสัปดาห์:</label>
-                <select id="pay-month-select" class="month-dropdown">
-                    ${optionsHTML}
-                </select>
-            </div>
-            <div class="week-select-grid" id="month-select-grid" style="margin-top: 12px;"></div>
-        `;
-
-        document.getElementById("pay-month-select")?.addEventListener("change", (e) => {
-            selectedMonthIndex = Number(e.target.value);
-            renderWeekGrid();
-        });
-    }
-
-    function renderWeekGrid() {
-        const grid = document.getElementById("month-select-grid");
-        if (!grid) return;
-
-        const weeksInMonth = WEEKS_LIST.filter(w => w.monthIndex === selectedMonthIndex);
-
-        grid.innerHTML = weeksInMonth.map((item, localIdx) => {
-            const isFullyPaid = Boolean(member.paidWeeks ? member.paidWeeks[item.index] : false);
-            const isSelected = selectedWeeks.includes(item.index);
-
-            if (isFullyPaid) {
-                return `
-                <div class="week-option paid-already">
-                    <i class="ti ti-circle-check-filled week-check-icon"></i>
-                    <div class="week-text">
-                        <span class="w-title">สัปดาห์ที่ ${localIdx + 1}</span>
-                        <span class="sub-date">จ่ายแล้ว</span>
-                    </div>
-                </div>`;
-            }
-
-            return `
-            <div class="week-option ${isSelected ? 'selected' : ''}" onclick="toggleWeekSelection(${item.index})">
-                <i class="ti ${isSelected ? 'ti-circle-check-filled' : 'ti-circle'} week-check-icon"></i>
-                <div class="week-text">
-                    <span class="w-title">สัปดาห์ที่ ${localIdx + 1} (฿${rate})</span>
-                    <span class="sub-date">${item.dateRange}</span>
-                </div>
-            </div>`;
-        }).join("");
-    }
-
-    window.toggleWeekSelection = async function(index) {
-        // บันทึก toggle สัปดาห์ไปยัง MySQL ผ่าน /api/admin/toggle-paid
-        try {
-            const response = await fetch("/api/admin/toggle-paid", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    memberId: member.id,
-                    mode: "week",
-                    weekIndex: index
-                })
-            });
-            
-            if (response.ok) {
-                console.log(`✅ บันทึกสัปดาห์ที่ ${index} สำเร็จ`);
-                
-                // โหลดข้อมูลใหม่จาก API
-                const membersResponse = await fetch("/api/members", { cache: "no-store" });
-                if (membersResponse.ok) {
-                    const updatedMembers = await membersResponse.json();
-                    const updatedMember = updatedMembers.find(m => m.id === member.id);
-                    if (updatedMember) {
-                        member.paidWeeks = updatedMember.paidWeeks;
-                        member.history = updatedMember.history;
-                        
-                        // re-render UI
-                        renderWeekGrid();
-                    }
-                }
-            } else {
-                console.error(`❌ บันทึกไม่สำเร็จ: HTTP ${response.status}`);
-                alert("ไม่สามารถบันทึกได้ กรุณาลองใหม่อีกครั้ง");
-            }
-        } catch (e) {
-            console.error("❌ เชื่อมต่อ API ไม่ได้:", e);
-            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
-        }
+        const totalAmount = selectedMonths.length * rate;
+        updatePayAmountUI(totalAmount, selectedMonths.length > 0);
+        renderMonthModeUI();
     };
 
     function updatePayAmountUI(totalAmount, hasSelection) {
@@ -642,19 +483,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const labelEl = document.getElementById("payment-week-label");
         if (labelEl) {
             if (COLLECTION_MODE === "month") {
-                labelEl.textContent = selectedMonths.length > 0 ? `เลือกชำระทั้งหมด ${selectedMonths.length} เดือน` : "กรุณาเลือกเดือนที่ต้องการชำระ";
-            } else {
-                const weeksInMonth = WEEKS_LIST.filter(w => w.monthIndex === selectedMonthIndex);
-                const weekNumbers = selectedWeeks
-                    .map(globalIdx => weeksInMonth.findIndex(w => w.index === globalIdx) + 1)
-                    .filter(num => num > 0)
-                    .sort((a, b) => a - b);
-
-                if (weekNumbers.length === 0) {
-                    labelEl.textContent = "กรุณาเลือกสัปดาห์ที่ต้องการชำระ";
-                } else {
-                    labelEl.textContent = `ยอดที่ต้องชำระประจำสัปดาห์ที่ ${weekNumbers.join(", ")}`;
-                }
+                labelEl.textContent = selectedMonths.length > 0 
+                    ? `เลือกชำระทั้งหมด ${selectedMonths.length} เดือน` 
+                    : "กรุณาเลือกเดือนที่ต้องการชำระ";
             }
         }
 
@@ -662,8 +493,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (hasSelection) {
             methodWrap?.classList.remove("step-hidden");
             methodWrap?.classList.add("step-visible");
-            
-            // เปิดแถบแรกเป็น QR Code โดยอัตโนมัติหากยังไม่มีการเลือก Tab
             if (!document.querySelector(".tab-btn.active")) {
                 switchTab("qr");
             } else {
@@ -681,9 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? ROOM.promptpayId
             : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0863481103");
 
-        const isMonthMode = COLLECTION_MODE === "month";
-        const selectedCount = isMonthMode ? selectedMonths.length : selectedWeeks.length;
-        const totalAmount = selectedCount * rate;
+        const totalAmount = selectedMonths.length * rate;
 
         if (typeof buildPromptPayPayload === "function" && totalAmount > 0) {
             const payload = buildPromptPayPayload(promptpayAccount, totalAmount);
@@ -705,66 +532,45 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (which === "qr") {
             panelCash?.classList.add("step-hidden");
-            panelCash?.classList.remove("step-visible");
             panelQr?.classList.remove("step-hidden");
-            panelQr?.classList.add("step-visible");
-            
             updateQRCode();
-        } else if (which === "cash") {
+        } else {
             panelQr?.classList.add("step-hidden");
-            panelQr?.classList.remove("step-visible");
             panelCash?.classList.remove("step-hidden");
-            panelCash?.classList.add("step-visible");
         }
     }
 
     function hideAllPanels() {
-        document.getElementById("tab-qr")?.classList.remove("active");
-        document.getElementById("tab-cash")?.classList.remove("active");
-
-        const panelQr = document.getElementById("panel-qr");
-        const panelCash = document.getElementById("panel-cash");
-
-        panelQr?.classList.add("step-hidden");
-        panelQr?.classList.remove("step-visible");
-        panelCash?.classList.add("step-hidden");
-        panelCash?.classList.remove("step-visible");
+        document.getElementById("panel-qr")?.classList.add("step-hidden");
+        document.getElementById("panel-cash")?.classList.add("step-hidden");
     }
 
+    // ทำรายการชำระเงินพร้อมแนบรูปสลิป
     async function markPending(method) {
-        const isMonthMode = COLLECTION_MODE === "month";
-        const hasSelection = isMonthMode ? selectedMonths.length > 0 : selectedWeeks.length > 0;
-
+        const hasSelection = selectedMonths.length > 0;
         if (!hasSelection) {
-            alert(isMonthMode ? "กรุณาเลือกเดือนที่ต้องการชำระ" : "กรุณาเลือกสัปดาห์ที่ต้องการชำระ");
+            alert("กรุณาเลือกเดือนที่ต้องการชำระ");
             return;
         }
 
-        const nowDate = new Date().toLocaleDateString("th-TH");
-        const payAmount = isMonthMode ? selectedMonths.length * rate : selectedWeeks.length * rate;
-
-        if (isMonthMode) {
-            if (!member.paidMonths) member.paidMonths = Array(12).fill(false);
-            selectedMonths.forEach(mIdx => member.paidMonths[mIdx] = true);
-        } else {
-            const weekCount = typeof WEEKS_LIST !== 'undefined' ? WEEKS_LIST.length : 52;
-            if (!member.paidWeeks) member.paidWeeks = Array(weekCount).fill(false);
-            selectedWeeks.forEach(wIdx => {
-                member.paidWeeks[wIdx] = true;
-            });
-        }
-
-        if (isMonthMode) {
-            const currentMonth = new Date().getMonth();
-            member.paid = Boolean(member.paidMonths[currentMonth]);
-        } else {
-            const currentWeekIdx = getCurrentWeekIndex();
-            if (currentWeekIdx !== -1) {
-                member.paid = Boolean(member.paidWeeks[currentWeekIdx]);
-            } else {
-                member.paid = selectedWeeks.some(wIdx => member.paidWeeks[wIdx]);
+        // เช็กและอ่านไฟล์สลิป (ถ้าเลือกสแกนจ่าย)
+        let slipBase64 = null;
+        if (method === "PromptPay") {
+            const slipInput = document.getElementById("slip-file");
+            if (slipInput && slipInput.files.length > 0) {
+                try {
+                    slipBase64 = await getBase64(slipInput.files[0]);
+                } catch (e) {
+                    console.error("❌ แปลงไฟล์สลิปไม่สำเร็จ:", e);
+                }
             }
         }
+
+        const nowDate = new Date().toLocaleDateString("th-TH");
+        const payAmount = selectedMonths.length * rate;
+
+        if (!member.paidMonths) member.paidMonths = Array(12).fill(false);
+        selectedMonths.forEach(mIdx => member.paidMonths[mIdx] = true);
 
         if (!member.history) member.history = [];
         member.history.push({
@@ -772,55 +578,40 @@ document.addEventListener("DOMContentLoaded", async () => {
             method: method,
             amount: payAmount,
             mode: COLLECTION_MODE,
-            items: isMonthMode ? [...selectedMonths] : [...selectedWeeks]
+            items: [...selectedMonths],
+            slipUrl: slipBase64 // แนบข้อมูลสลิปเข้าประวัติการชำระเงิน
         });
 
-        const idx = MEMBERS.findIndex(m => m.id === member.id);
-        if (idx !== -1) {
-            MEMBERS[idx] = member;
-        }
-
-        // 1. บันทึกลง LocalStorage ตามเดิม
-        window.MEMBERS = MEMBERS;
-        localStorage.setItem("fund-dashboard-members", JSON.stringify(MEMBERS));
-
-        // 🟢 2. เพิ่มส่วนนี้: ยิงข้อมูลไปบันทึกลง MySQL Database บน Railway
+        // ส่งข้อมูลอัปเดตไปบันทึกลง MySQL API บน Server
         try {
-            await fetch(`/api/members/${member.id}`, {
+            const res = await fetch(`/api/members/${member.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     paidMonths: member.paidMonths,
-                    paidWeeks: member.paidWeeks,
                     history: member.history
                 })
             });
-            console.log("✅ อัปเดตฐานข้อมูล MySQL สำเร็จ");
+
+            if (res.ok) {
+                alert("แจ้งชำระเงินเรียบร้อยแล้ว!");
+                document.getElementById('pay-form-wrap')?.classList.add('hidden');
+                document.getElementById('pay-done')?.classList.remove('hidden');
+                setTimeout(() => {
+                    window.location.href = `member.html?id=${member.id}`;
+                }, 2000);
+            } else {
+                alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+            }
         } catch (err) {
-            console.error("❌ ไม่สามารถอัปเดตลง MySQL ได้:", err);
+            console.error("❌ บันทึกไม่สำเร็จ:", err);
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         }
-
-        alert("บันทึกการชำระเงินเรียบร้อยแล้ว!");
-
-        const formWrap = document.getElementById('pay-form-wrap');
-        const payDone = document.getElementById('pay-done');
-        const doneBackLink = document.getElementById('done-back-link');
-
-        if (doneBackLink) doneBackLink.href = `member.html?id=${member.id}`;
-        if (formWrap) formWrap.classList.add('hidden');
-        if (payDone) payDone.classList.remove('hidden');
-
-        setTimeout(() => {
-           window.location.href = `member.html?id=${member.id}`; 
-        }, 3000);
     }
 
-    document.getElementById("back-btn")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        location.href = `member.html?id=${member.id}`;
-    });
     document.getElementById("tab-qr")?.addEventListener("click", () => switchTab("qr"));
     document.getElementById("tab-cash")?.addEventListener("click", () => switchTab("cash"));
     document.getElementById("confirm-qr")?.addEventListener("click", () => markPending("PromptPay"));
     document.getElementById("confirm-cash")?.addEventListener("click", () => markPending("เงินสด"));
+    document.getElementById("back-btn")?.addEventListener("click", () => history.back());
 });
