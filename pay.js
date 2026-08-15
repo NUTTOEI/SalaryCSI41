@@ -333,8 +333,19 @@ document.addEventListener("DOMContentLoaded", () => {
         window.MEMBERS = MEMBERS;
         localStorage.setItem("fund-dashboard-members", JSON.stringify(MEMBERS));
 
-        if (typeof saveAllMembersToStorage === "function") {
-            saveAllMembersToStorage();
+        try {
+            await fetch(`/api/members/${member.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    paidMonths: member.paidMonths,
+                    paidWeeks: member.paidWeeks,
+                    history: member.history
+                })
+            });
+            console.log("✅ อัปเดตข้อมูลสำเร็จ");
+        } catch (err) {
+            console.error("❌ อัปเดตข้อมูลไม่สำเร็จ", err);
         }
 
         alert("บันทึกการชำระเงินเรียบร้อยแล้ว!");
