@@ -165,8 +165,8 @@ app.post('/api/admin/toggle-paid', async (req, res) => {
 app.post('/api/admin/reset', async (req, res) => {
     try {
         await pool.query(
-            'UPDATE members SET paid_months = ?, paid_weeks = ?',
-            [JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS())]
+            'UPDATE members SET paid_months = ?, paid_weeks = ?, history = ?',
+            [JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
         );
         res.json({ status: 'success' });
     } catch (err) {
