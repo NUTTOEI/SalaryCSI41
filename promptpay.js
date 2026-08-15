@@ -10,7 +10,11 @@ function crc16(payload) {
     return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
-function buildPromptPayPayload(target, amount) {
+function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
+
+    const safeName = (typeof name !== 'undefined' && name ? name : "PROMPTPAY");
+    const merchantName = safeName.substring(0, 25);
+    
     target = String(target).replace(/[^0-9]/g, '');
     
     let targetType = '01'; // 01 = เบอร์โทรศัพท์, 02 = เลขบัตรประชาชน/เลขผู้เสียภาษี

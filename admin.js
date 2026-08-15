@@ -226,15 +226,25 @@ function startEditAmount(el) {
     }
 }
 
-function saveEditAmount(input) {
-    const id = Number(input.getAttribute("data-amount-id"));
-    const m = MEMBERS.find(x => x.id === id);
-    if (!m) return;
-    const n = Number(input.value);
-    if (isFinite(n) && n >= 0) {
-        m.amount = n;
-        persistAll();
-        render();
+async function saveEditAmount(memberId) {
+    const newAmount = document.getElementById(`edit-amount-${memberId}`).value;
+
+    try {
+        const response = await fetch(`/api/admin/members/${memberId}/amount`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: Number(newAmount) })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            alert('แก้ไขยอดเงินเรียบร้อย');
+            location.reload();
+        } else {
+            alert(result.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        }
+    } catch (error) {
+        console.error('Error updating amount:', error);
     }
 }
 
@@ -409,18 +419,24 @@ function closeTargetModal() {
     if (modal) modal.style.display = "none";
 }
 
-function saveTargetAmount() {
-    const input = document.getElementById("target-modal-input");
-    if (input) {
-        const num = Number(input.value);
-        if (isFinite(num) && num > 0) {
-            TARGET_AMOUNT = num;
-            localStorage.setItem("fund-dashboard-target", num);
-            render();
-            closeTargetModal();
+async function saveTargetAmount() {
+    const targetValue = document.getElementById('target-input').value;
+
+    try {
+        const response = await fetch('/api/setting/target', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: Number(targetValue) })
+        });
+
+        if (response.ok) {
+            localStorage.setItem('targetAmount', targetValue);
+            alert('บันทึกยอดเป้าหมายเรียบร้อย');
         } else {
-            alert("กรุณาระบุจำนวนเงินเป้าหมายที่ถูกต้อง");
+            alert('บันทึกข้อมูลไม่่สำเร็จ');
         }
+    } catch (error) {
+        console.error('Error saving target:', error);
     }
 }
 

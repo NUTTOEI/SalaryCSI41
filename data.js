@@ -29,7 +29,19 @@ async function getMembersData() {
   }
 }
 
-function getTargetData() {
-  const val = localStorage.getItem("fund-dashboard-target");
-  return val !== null ? Number(val) : 4000;
+async function getTargetData() {
+  try {
+    const response = await fetch('/api/settings/target');
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.target !== undefined) {
+        localStorage.setItem('targetAmount', data.target);
+        return Number(data.target);
+      }
+    }
+  } catch (error) {
+    console.warn('ดึงข้อมูลเป้าหมายจาก API ไม่สำเร็จ ใช้ค่าจาก LocalStorage แทน:', error);
+  }
+
+  return Number(localStorage.getItem('targetAmount')) || 0;
 }

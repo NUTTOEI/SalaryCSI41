@@ -51,12 +51,23 @@ function rowToMember(row) {
 
 // GET /api/members — ที่ admin.js / member.js / pay.js เรียกทุกครั้งตอนโหลดหน้า
 app.get('/api/members', async (req, res) => {
+    const { id } = req.params;
+    const { paidMonths, paidWeeks, history } = req,body;
+
     try {
-        const [rows] = await pool.query('SELECT * FROM members ORDER BY id ASC');
-        res.json(rows.map(rowToMember));
+       await db.query(
+        'UPDATE members SET paidMonths = ?, paidWeeks = ?, history = ? WHERE id = '?',
+        [
+            JSON.stringify(paidMonths || []),
+            JSON.stringify(paidWeeks || []),
+            JSON.stringify(history || []),
+            id
+        ]
+       );
+       res.json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });
     } catch (err) {
-        console.error('GET /api/members error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
+        console.error('Update member error:', err);
+        res.status(500).json({ error: 'ไม่สามารถอัปเดตข้อมูลสมาชิกได้' });
     }
 });
 
