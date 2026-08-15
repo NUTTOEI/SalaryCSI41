@@ -56,7 +56,7 @@ app.get('/api/members', async (req, res) => {
 
     try {
        await db.query(
-        'UPDATE members SET paidMonths = ?, paidWeeks = ?, history = ? WHERE id = '?',
+        'UPDATE members SET paidMonths = ?, paidWeeks = ?, history = ? WHERE id = ?',
         [
             JSON.stringify(paidMonths || []),
             JSON.stringify(paidWeeks || []),
