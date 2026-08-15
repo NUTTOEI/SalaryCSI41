@@ -553,9 +553,43 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
+        const payAmount = selectedMonths.length * rate;
+
         // เช็กและอ่านไฟล์สลิป (ถ้าเลือกสแกนจ่าย)
-        let slipBase64 = null;
         if (method === "PromptPay") {
+            const slipInput = document.getElementById("slip-file");
+            if (slipInput && slipInput.files.length === 0) {
+                alert("กรุณาแนบไฟล์รูปภาพสลิปการโอนเงิน");
+                return;
+            }
+
+            const formData = new formData();
+            formData.append("slip_image", slipInput.files[0]);
+            formData.append("expected_amount", payAmount);
+
+            try {
+                const verifyRes = await fetch("/verify-slip", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const verifyData = await verifyRes.json();
+
+                if (!verifyRes.ok || verifyData.status !== "success") {
+                    alert("❌ ตรวจสอบสลิปไม่ผ่าน: " + (verifyData.message || "สลิปไม่ถูกต้อง"));
+                    return;
+                }
+
+                console.log("✅ ตรวจสอบสลิปผ่านแล้ว:", verifyData.message);
+            } catch (err) {
+                console.error("❌ เกิดข้อผิดพลาดในการตรวจสลิป:", err);
+                alert("ไม่สามารถเชื่อมต่อระบบตรวจสอบสลิปได้ กรุณาลองใหม่อีกครั้ง");
+                return;
+            }
+        }
+
+        let slipBase64 = null;
+        if (method === "Promptpay") {
             const slipInput = document.getElementById("slip-file");
             if (slipInput && slipInput.files.length > 0) {
                 try {
@@ -567,10 +601,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const nowDate = new Date().toLocaleDateString("th-TH");
-        const payAmount = selectedMonths.length * rate;
 
         if (!member.paidMonths) member.paidMonths = Array(12).fill(false);
-        selectedMonths.forEach(mIdx => member.paidMonths[mIdx] = true);
+        selectedMOnths.forEach(mIdx => member.paidMonths[mIdx] = true);
 
         if (!member.history) member.history = [];
         member.history.push({
@@ -579,10 +612,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             amount: payAmount,
             mode: COLLECTION_MODE,
             items: [...selectedMonths],
-            slipUrl: slipBase64 // แนบข้อมูลสลิปเข้าประวัติการชำระเงิน
+            slipUrl: slipBase64
         });
 
-        // ส่งข้อมูลอัปเดตไปบันทึกลง MySQL API บน Server
         try {
             const res = await fetch(`/api/members/${member.id}`, {
                 method: "PUT",
@@ -594,14 +626,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             if (res.ok) {
-                alert("แจ้งชำระเงินเรียบร้อยแล้ว!");
+                alert("แจ้งชำระเงินสำเร็จ!");
                 document.getElementById('pay-form-wrap')?.classList.add('hidden');
                 document.getElementById('pay-done')?.classList.remove('hidden');
                 setTimeout(() => {
                     window.location.href = `member.html?id=${member.id}`;
                 }, 2000);
             } else {
-                alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+                alert("ไม่สามารถบันทึดข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
             }
         } catch (err) {
             console.error("❌ บันทึกไม่สำเร็จ:", err);
