@@ -49,25 +49,34 @@ function rowToMember(row) {
 /*  API: สมาชิก                                                        */
 /* ------------------------------------------------------------------ */
 
-// GET /api/members — ที่ admin.js / member.js / pay.js เรียกทุกครั้งตอนโหลดหน้า
 app.get('/api/members', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM members');
+        res.json(rows.map(rowToMember));
+    } catch (err) {
+        console.error('GET /api/members error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+// GET /api/members — ที่ admin.js / member.js / pay.js เรียกทุกครั้งตอนโหลดหน้า
+app.put('/api/members/:id', async (req, res) => {
     const { id } = req.params;
     const { paidMonths, paidWeeks, history } = req.body;
-
     try {
-       await db.query(
-        'UPDATE members SET paidMonths = ?, paidWeeks = ?, history = ? WHERE id = ?',
-        [
-            JSON.stringify(paidMonths || []),
-            JSON.stringify(paidWeeks || []),
-            JSON.stringify(history || []),
-            id
-        ]
-       );
-       res.json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });
+        await pool.query(
+            'UPDATE members SET paid_months = ?, paid_weeks = ?, history = ? WHERE id = ?',
+            [
+                JSON.stringify(paidMonths || DEFAULT_MONTHS()),
+                JSON.stringify(paidWeeks || DEFAULT_WEEKS()),
+                JSON.stringify(history || []),
+                id
+            ]
+        );
+        res.json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });
     } catch (err) {
-        console.error('Update member error:', err);
-        res.status(500).json({ error: 'ไม่สามารถอัปเดตข้อมูลสมาชิกได้' });
+        console.error('PUT /api/members/:id error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
     }
 });
 

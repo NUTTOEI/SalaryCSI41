@@ -11,13 +11,11 @@ function crc16(payload) {
 }
 
 function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
-
     const safeName = (typeof name !== 'undefined' && name ? name : "PROMPTPAY");
     const merchantName = safeName.substring(0, 25);
     
     target = String(target).replace(/[^0-9]/g, '');
-    
-    let targetType = '01'; // 01 = เบอร์โทรศัพท์, 02 = เลขบัตรประชาชน/เลขผู้เสียภาษี
+    let targetType = '01';
     let formattedTarget = target;
 
     if (target.length === 10 && target.startsWith('0')) {
@@ -41,8 +39,6 @@ function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
     }
     
     payload += '5802TH'; 
-    
-    const merchantName = (name || "PROMPTPAY").substring(0, 25);
     payload += `59${String(merchantName.length).padStart(2, '0')}${merchantName}`;
     payload += '6007BANGKOK';
     payload += '6304';

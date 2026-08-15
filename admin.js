@@ -218,7 +218,7 @@ function startEditAmount(el) {
     const id = Number(el.getAttribute("data-edit-amount"));
     const m = MEMBERS.find(x => x.id === id);
     if (!m) return;
-    el.innerHTML = '<input type="number" class="amount-input" data-amount-id="' + id + '" value="' + m.amount + '">';
+    el.innerHTML = `<input type="number" class="amount-input" id="edit-amount-${id}" data-amount-id="${id}" value="${m.amount}">`;
     const input = el.querySelector("input");
     if (input) {
         input.focus();
@@ -227,7 +227,9 @@ function startEditAmount(el) {
 }
 
 async function saveEditAmount(memberId) {
-    const newAmount = document.getElementById(`edit-amount-${memberId}`).value;
+    const inputEl = document.getElementById(`edit-amount-${memberId}`);
+    if (!inputEl) return;
+    const newAmount = inputEl.value;
 
     try {
         const response = await fetch(`/api/admin/members/${memberId}/amount`, {
@@ -236,12 +238,8 @@ async function saveEditAmount(memberId) {
             body: JSON.stringify({ amount: Number(newAmount) })
         });
 
-        const result = await response.json();
         if (response.ok) {
-            alert('แก้ไขยอดเงินเรียบร้อย');
-            location.reload();
-        } else {
-            alert(result.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            await loadFromStorage();
         }
     } catch (error) {
         console.error('Error updating amount:', error);
@@ -310,7 +308,10 @@ document.addEventListener("click", (e) => {
 
 document.addEventListener("focusout", (e) => {
     const input = e.target.closest(".amount-input");
-    if (input) saveEditAmount(input);
+    if (input) {
+        const memberId = Number(input.getAttribute("data-amount-id"));
+        saveEditAmount(memberId);
+    }
 });
 
 document.addEventListener("keydown", (e) => {
@@ -420,10 +421,11 @@ function closeTargetModal() {
 }
 
 async function saveTargetAmount() {
-    const targetValue = document.getElementById('target-input').value;
+    const targetValue = document.getElementById('target-modal-input')?.value;
+    if (!targetValue) return;
 
     try {
-        const response = await fetch('/api/setting/target', {
+        const response = await fetch('/api/settings/target', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ target: Number(targetValue) })
@@ -431,9 +433,8 @@ async function saveTargetAmount() {
 
         if (response.ok) {
             localStorage.setItem('targetAmount', targetValue);
-            alert('บันทึกยอดเป้าหมายเรียบร้อย');
-        } else {
-            alert('บันทึกข้อมูลไม่สำเร็จ');
+            closeTargetModal();
+            await loadFromStorage();
         }
     } catch (error) {
         console.error('Error saving target:', error);
