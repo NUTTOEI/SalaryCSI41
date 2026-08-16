@@ -61,7 +61,7 @@ function renderHomeSummary() {
     // คำนวณยอดเงินสะสมจริงตามงวดที่กดจ่าย
     const collected = computeCollectedTotal(MEMBERS);
 
-    const targetAmt = typeof getTargetData === "function" ? getTargetData() : TARGET_AMOUNT;
+    const targetAmt = TARGET_AMOUNT;
     const pct = targetAmt > 0 ? Math.round((collected / targetAmt) * 100) : 0;
 
     if (document.getElementById("jar-pct")) document.getElementById("jar-pct").textContent = pct + "%";

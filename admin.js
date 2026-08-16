@@ -43,7 +43,7 @@ function computeStats() {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
     const paid = MEMBERS.filter(m => isMemberPaidCurrent(m)).length;
     const unpaid = MEMBERS.length - paid;
-    const target = typeof getTargetData === "function" ? (getTargetData() || 0) : TARGET_AMOUNT;
+    const target = TARGET_AMOUNT;
 
     const collected = MEMBERS.reduce((sum, m) => {
         const rate = Number(m.amount) || 100;
@@ -403,9 +403,6 @@ async function loadFromStorage() {
     } catch (e) {
         console.error("ดึงข้อมูลจาก MySQL ล้มเหลว:", e);
     }
-
-    const rawTarget = typeof getTargetData === "function" ? getTargetData() : TARGET_AMOUNT;
-    TARGET_AMOUNT = typeof rawTarget === "number" ? rawTarget : 4000;
 }
 
 function openTargetModal() {
@@ -438,7 +435,7 @@ async function saveTargetAmount() {
         });
 
         if (response.ok) {
-            localStorage.setItem('targetAmount', targetValue);
+            localStorage.setItem('fund-dashboard-target', targetValue);
             closeTargetModal();
             await loadFromStorage();
         }
@@ -456,17 +453,17 @@ if (saveTargetBtn) {
     saveTargetBtn.addEventListener("click", saveTargetAmount);
 }
 
-document.addEventListener("keydown", (e) => {
-    const modal = document.getElementById("target-modal");
-    if (modal && modal.style.display === "flex") {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            saveTargetAmount();
-        } else if (e.key === "Escape") {
-            closeTargetModal();
-        }
-    }
-});
+// document.addEventListener("keydown", (e) => {
+//     const modal = document.getElementById("target-modal");
+//     if (modal && modal.style.display === "flex") {
+//         if (e.key === "Enter") {
+//             e.preventDefault();
+//             saveTargetAmount();
+//         } else if (e.key === "Escape") {
+//             closeTargetModal();
+//         }
+//     }
+// });
 
 function getCollectionMode() {
     return localStorage.getItem("fund-dashboard-mode") || "month";
