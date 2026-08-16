@@ -9,6 +9,7 @@ const sharp = require('sharp');
 const jsQR = require('jsqr');
 const axios = require('axios');
 const path = require('path');
+const FormData = require('form-data');
 
 const { pool, testConnection } = require('./db');
 
@@ -239,23 +240,22 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
-        // 1. ถอดรหัส QR Code จากรูปภาพสลิป
-        const image = await sharp(req.file.buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-        const qrCode = jsQR(new Uint8ClampedArray(image.data), image.info.width, image.info.height);
-        if (!qrCode) {
-            return res.status(400).json({ status: 'fail', message: 'ไม่พบ QR Code บนสลิป กรุณาถ่ายหรือแคปรูปให้เห็น QR Code ชัดเจน' });
-        }
-
-        // 2. ส่ง QR Payload ไปตรวจสอบกับ SlipOK API (ข้อมูลจริงจากธนาคาร)
         const apiKey = (process.env.SLIPOK_API_KEY || 'slipok-257bfc64-2d78-4657-b9dd-20547313dfa4').trim();
-        console.log('🔑 Current SlipOK API Key:', apiKey);
+
+        // สร้าง FormData เพื่อส่งไฟล์รูปภาพสลิปตรงไปยัง SlipOK
+        const formData = new FormData();
+        formData.append('files', req.file.buffer, {
+            filename: req.file.originalname || 'slip.jpg',
+            contentType: req.file.mimetype
+        });
+        formData.append('log', 'true');
 
         const slipokResponse = await axios.post(
             `https://api.slipok.com/api/line/apikey/SLIPOK8EU8QZF`,
             { data: qrCode.data },
             { 
                 headers: { 
-                    'Content-Type': 'application/json',
+                    ...formData.getHeaders();
                     'x-authorization' : apiKey
                 } 
             }
