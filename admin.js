@@ -389,11 +389,17 @@ function closeHistoryModal() {
 
 async function loadFromStorage() {
     try {
+        const targetRes = await fetch("/api/settings/target", { cache: "no-store" });
+        if (targetRes.ok) {
+            const targetData = await targetRes.json();
+            TARGET_AMOUNT = Number(targetData.target) || 4000;
+        }
+
         const response = await fetch("/api/members", { cache: "no-store" });
         if (response.ok) {
             MEMBERS = await response.json();
-            render()
         }
+        render()
     } catch (e) {
         console.error("ดึงข้อมูลจาก MySQL ล้มเหลว:", e);
     }

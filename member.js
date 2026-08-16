@@ -371,10 +371,17 @@ async function loadLatestMembers() {
 }
 
 async function initApp() {
-
     localStorage.setItem("fund-dashboard-mode", "month");
     MEMBERS = await loadLatestMembers();
-    TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
+    try {
+        const resTarget = await fetch("/api/settings/target", { cache: "no-store" });
+        if (resTarget.ok) {
+            const dataTarget = await resTarget.json();
+            TARGET_AMOUNT = Number(dataTarget.target) || 4000;
+        }
+    } catch (e) {
+        TARGET_AMOUNT = 4000;
+    }
 
     const params = new URLSearchParams(location.search);
     const backTo = params.get("id");
