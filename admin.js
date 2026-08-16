@@ -28,7 +28,7 @@ let state = { query: "", filter: "all", sort: "index", ratePreview: 100 };
 function isMemberPaidCurrent(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
     if (mode === "month") {
-        const currentMonth = new Date().getMonth(); // ดึงเดือนปัจจุบัน (0 = ม.ค., 7 = ส.ค.)
+        const currentMonth = getActiveMonthIndex(); // ดึงเดือนปัจจุบัน (0 = ม.ค., 7 = ส.ค.)
         const paidMonths = m.paidMonths || Array(12).fill(false);
         return Boolean(paidMonths[currentMonth]);
     } else {
@@ -247,6 +247,13 @@ async function saveEditAmount(memberId) {
 }
 
 document.addEventListener("click", (e) => {
+
+    const saveTargetBtn = e.target.closest("#btn-save-target");
+    if (saveTargetBtn) {
+        saveTargetAmount();
+        return;
+    }
+
     const resetBtn = e.target.closest("#reset-all-btn");
     if (resetBtn) {
         openResetModal();
@@ -424,9 +431,14 @@ function closeTargetModal() {
 }
 
 async function saveTargetAmount() {
-    const targetValue = document.getElementById('target-modal-input')?.value;
-    if (!targetValue) return;
+    const inputEl = document.getElementById('target-modal-input');
+    const targetValue = inputEl ? inputEl.value : null;
 
+    if (!targetValue || isNaN(Number(targetValue))) {
+        alert("กรุณากรอกจำนวนเงินเพื่อตั้งเป้าหมาย");
+        return;
+    } 
+        
     try {
         const response = await fetch('/api/settings/target', {
             method: 'PUT',
@@ -438,19 +450,17 @@ async function saveTargetAmount() {
             localStorage.setItem('fund-dashboard-target', targetValue);
             closeTargetModal();
             await loadFromStorage();
+        } else {
+            alert("บันทึกไม่สำเร็จ: เซิร์ฟเวอร์ตอบกลับผิดพลาด");
         }
     } catch (error) {
         console.error('Error saving target:', error);
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
 }
 
 if (document.getElementById("stat-target")) {
     document.getElementById("stat-target").addEventListener("click", openTargetModal);
-}
-
-const saveTargetBtn = document.getElementById("btn-save-target");
-if (saveTargetBtn) {
-    saveTargetBtn.addEventListener("click", saveTargetAmount);
 }
 
 // document.addEventListener("keydown", (e) => {
