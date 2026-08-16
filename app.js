@@ -247,11 +247,11 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         }
 
         // 2. ส่ง QR Payload ไปตรวจสอบกับ SlipOK API (ข้อมูลจริงจากธนาคาร)
-        const apiKey = (process.env.SLIPOK_API_KEY || 'SLIPOK8EU8QZF').trim();
+        const apiKey = (process.env.SLIPOK_API_KEY || 'slipok-257bfc64-2d78-4657-b9dd-20547313dfa4').trim();
         console.log('🔑 Current SlipOK API Key:', apiKey);
 
         const slipokResponse = await axios.post(
-            `https://api.slipok.com/api/line/apikey/73437`,
+            `https://api.slipok.com/api/line/apikey/SLIPOK8EU8QZF`,
             { data: qrCode.data },
             { 
                 headers: { 
