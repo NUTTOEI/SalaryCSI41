@@ -231,6 +231,9 @@ app.put('/api/settings/target', async (req, res) => {
 /* ------------------------------------------------------------------ */
 /*  ระบบตรวจสลิปโอนเงิน + แจ้งเตือน LINE (ย้ายมาจาก scanQR.js เดิม)      */
 /* ------------------------------------------------------------------ */
+// เพิ่ม Environment Variable บน Render: SLIPOK_API_KEY
+const SLIPOK_API_KEY = process.env.SLIPOK_API_KEY; 
+
 app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
     try {
         const expectedAmount = parseFloat(req.body.expected_amount);
@@ -238,73 +241,79 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
+        // 1. ถอดรหัส QR Code จากรูปภาพสลิป
         const image = await sharp(req.file.buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
         const qrCode = jsQR(new Uint8ClampedArray(image.data), image.info.width, image.info.height);
         if (!qrCode) {
-            return res.status(400).json({ status: 'fail', message: 'ไม่พบ QR Code บนสลิป กรุณาใช้รูปภาพที่ชัดเจน' });
+            return res.status(400).json({ status: 'fail', message: 'ไม่พบ QR Code บนสลิป กรุณาถ่ายหรือแคปรูปให้เห็น QR Code ชัดเจน' });
         }
 
-        const qrHash = crypto.createHash('sha256').update(qrCode.data).digest('hex');
-        if (processedSlips.has(qrHash)) {
-            return res.status(400).json({ status: 'fail', message: 'สลิปนี้เคยถูกส่งมาแล้ว' });
-        }
-
-        const processedBuffer = await sharp(req.file.buffer).resize(1200).grayscale().normalize().toBuffer();
-        const worker = await createWorker('tha+eng');
-        const { data: { text } } = await worker.recognize(processedBuffer);
-        await worker.terminate();
-
-        const cleanedText = text.replace(/\s+/g, '');
-        const cleanedExpectedName = EXPECTED_RECEIVER_NAME.replace(/\s+/g, '');
-        if (!cleanedText.includes(cleanedExpectedName)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: `ชื่อบัญชีผู้รับไม่ถูกต้อง! สลิปนี้ไม่ได้โอนไปยังบัญชี ${EXPECTED_RECEIVER_NAME}`
-            });
-        }
-
-        const validAmounts = [];
-        const regexDecimal = /\b(\d{1,3}(?:,\d{3})*|\d{1,6})\.(\d{2})\b/g;
-        let match;
-        while ((match = regexDecimal.exec(text)) !== null) {
-            const numVal = parseFloat(match[1].replace(/,/g, '') + '.' + match[2]);
-            if (numVal > 0 && numVal < 1000000) validAmounts.push(numVal);
-        }
-        const cleanTextNoComma = text.replace(/,/g, '');
-        if (cleanTextNoComma.includes(expectedAmount.toString())) validAmounts.push(expectedAmount);
-
-        let actualAmount = null;
-        if (validAmounts.length > 0) {
-            actualAmount = validAmounts.includes(expectedAmount) ? expectedAmount : validAmounts[0];
-        }
-        if (!actualAmount) {
-            return res.status(400).json({ status: 'fail', message: 'ไม่สามารถอ่านยอดเงินจากภาพสลิปได้ กรุณาใช้สลิปที่ชัดเจน' });
-        }
-        if (actualAmount !== expectedAmount) {
-            return res.status(400).json({
-                status: 'fail',
-                message: `ยอดเงินไม่ตรงกัน! ยอดบนสลิปคือ ${actualAmount.toLocaleString()} บาท แต่ยอดที่ต้องชำระคือ ${expectedAmount.toLocaleString()} บาท`
-            });
-        }
-
-        processedSlips.add(qrHash);
-
-        const messageText =
-            `🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n` +
-            `👤 บัญชีผู้รับ: ${EXPECTED_RECEIVER_NAME}\n` +
-            `💰 ยอดชำระตรงกัน: ${actualAmount.toLocaleString()} บาท\n` +
-            `⏰ เวลาทำรายการ: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`;
-
-        await axios.post(
-            'https://api.line.me/v2/bot/message/push',
-            { to: LINE_TARGET_ID, messages: [{ type: 'text', text: messageText }] },
-            { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` } }
+        // 2. ส่ง QR Payload ไปตรวจสอบกับ SlipOK API (ข้อมูลจริงจากธนาคาร)
+        const slipokResponse = await axios.post(
+            `https://api.slipok.com/api/line/apikey/${SLIPOK_API_KEY}`,
+            { data: qrCode.data },
+            { headers: { 'Content-Type': 'application/json' } }
         );
 
-        return res.json({ status: 'success', message: 'ตรวจสอบสลิปและส่งแจ้งเตือน LINE เรียบร้อยแล้ว' });
+        const result = slipokResponse.data;
+        if (!result.success) {
+            return res.status(400).json({ 
+                status: 'fail', 
+                message: result.message || 'สลิปไม่ถูกต้อง ไม่พบข้อมูลการโอนเงินจากธนาคาร' 
+            });
+        }
+
+        const slipData = result.data;
+
+        // 3. ตรวจสอบยอดเงินโอนจริงจากธนาคาร
+        if (parseFloat(slipData.amount) !== expectedAmount) {
+            return res.status(400).json({
+                status: 'fail',
+                message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท แต่ยอดที่ต้องชำระคือ ${expectedAmount} บาท`
+            });
+        }
+
+        // 4. ตรวจสอบชื่อผู้รับโอน
+        const receiverName = slipData.receiver?.name || '';
+        if (!receiverName.includes("ณัฐวัฒน์") && !receiverName.includes("NATTHAWAT")) {
+            return res.status(400).json({
+                status: 'fail',
+                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
+            });
+        }
+
+        // 5. เช็คเลขที่รายการ (transRef) ใน MySQL กันส่งสลิปซ้ำ
+        const transRef = slipData.transRef;
+        const [existing] = await pool.query('SELECT trans_ref FROM processed_slips WHERE trans_ref = ?', [transRef]);
+        if (existing.length > 0) {
+            return res.status(400).json({ status: 'fail', message: 'สลิปนี้เคยถูกนำมาใช้งานแล้ว' });
+        }
+
+        // บันทึก transRef ลงฐานข้อมูล
+        await pool.query('INSERT INTO processed_slips (trans_ref) VALUES (?)', [transRef]);
+
+        // 6. ส่งแจ้งเตือน LINE Notify / LINE Messaging API
+        const messageText =
+            `🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n` +
+            `👤 ผู้รับ: ${slipData.receiver.name}\n` +
+            `💰 ยอดเงิน: ${slipData.amount} บาท\n` +
+            `📄 เลขที่รายการ: ${transRef}\n` +
+            `⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
+
+        if (LINE_TARGET_ID && LINE_ACCESS_TOKEN) {
+            await axios.post(
+                'https://api.line.me/v2/bot/message/push',
+                { to: LINE_TARGET_ID, messages: [{ type: 'text', text: messageText }] },
+                { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` } }
+            );
+        }
+
+        return res.json({ status: 'success', message: 'ตรวจสอบสลิปสำเร็จ' });
+
     } catch (err) {
-        console.error('❌ /verify-slip Error:', err.message);
-        return res.status(500).json({ status: 'error', message: err.message });
+        console.error('❌ /verify-slip Error:', err.response?.data || err.message);
+        const errMsg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการตรวจสอบสลิป';
+        return res.status(500).json({ status: 'error', message: errMsg });
     }
 });
 
