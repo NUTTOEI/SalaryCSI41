@@ -216,11 +216,12 @@ app.put('/api/settings/target', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
         }
         await pool.query(
-            "INSERT INTO settings (`key`, `value`) VALUES ('target_amount', ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
-            [String(target)]
+            "INSERT INTO settings (`key`, `value`) VALUES ('target_amount', ?) ON DUPLICATE KEY UPDATE `value` = ?",
+            [String(target), String(target)]
         );
         res.json({ status: 'success' });
     } catch (err) {
+        console.error('PUT /api/settings/target error:', err);
         res.status(500).json({ status: 'error', message: err.message });
     }
 });
