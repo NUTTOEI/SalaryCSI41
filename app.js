@@ -240,7 +240,8 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
-        const apiKey = (process.env.SLIPOK_API_KEY || 'slipok-257bfc64-2d78-4657-b9dd-20547313dfa4').trim();
+        const apiKey = (process.env.SLIPOK_API_KEY || 'SLIPOK8EU8QZF').trim();
+        const branchId = '73437';
 
         // สร้าง FormData เพื่อส่งไฟล์รูปภาพสลิปตรงไปยัง SlipOK
         const formData = new FormData();
@@ -251,7 +252,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         formData.append('log', 'true');
 
         const slipokResponse = await axios.post(
-            `https://api.slipok.com/api/line/apikey/SLIPOK8EU8QZF`,
+            `https://api.slipok.com/api/line/apikey/${branchId}`,
             formData,
             { 
                 headers: { 
