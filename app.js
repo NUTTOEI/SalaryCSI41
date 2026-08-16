@@ -203,8 +203,10 @@ app.post('/api/admin/reset', async (req, res) => {
 app.get('/api/settings/target', async (req, res) => {
     try {
         const [rows] = await pool.query("SELECT `value` FROM settings WHERE `key` = 'target_amount'");
-        res.json({ target: rows.length ? Number(rows[0].value) : 4000 });
+        const targetVal = rows.length ? Number(rows[0].value) : 4000;
+        res.json({ target: isNaN(targetVal) ? 4000 : targetVal });
     } catch (err) {
+        console.error('GET /api/settings/target error:', err);
         res.status(500).json({ status: 'error', message: err.message });
     }
 });
@@ -219,7 +221,7 @@ app.put('/api/settings/target', async (req, res) => {
             "INSERT INTO settings (`key`, `value`) VALUES ('target_amount', ?) ON DUPLICATE KEY UPDATE `value` = ?",
             [String(target), String(target)]
         );
-        res.json({ status: 'success' });
+        res.json({ status: 'success', target });
     } catch (err) {
         console.error('PUT /api/settings/target error:', err);
         res.status(500).json({ status: 'error', message: err.message });
