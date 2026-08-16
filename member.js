@@ -369,7 +369,7 @@ async function loadLatestMembers() {
     }
     return [];
 }
-async function loadTsrgetAmount() {
+async function loadTargetAmount() {
     try {
         const resTarget = await fetch("/api/settings/target", { cache: "no-store" });
         if (resTarget.ok) {
@@ -449,7 +449,7 @@ function getMemberStatus(m) {
 
 initApp();
 
-window.addEventListener("storage", (e) => {
+window.addEventListener("storage", async (e) => {
    if (e.key === "fund-dashboard-member") {
         if (e.newValue) MEMBERS = JSON.parse(e.newValue);
    }
