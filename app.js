@@ -252,7 +252,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         const slipokResponse = await axios.post(
             `https://api.slipok.com/api/line/apikey/SLIPOK8EU8QZF`,
-            { data: qrCode.data },
+            formData,
             { 
                 headers: { 
                     ...formData.getHeaders(),
