@@ -254,7 +254,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             { 
                 headers: { 
                     'Content-Type': 'application/json',
-                    'x-authorization' : SLIPOK_API_KEY
+                    'x-authorization' : process.env.SLIPOK_API_KEY || 'slipok-257bfc64-2d78-4657-b9dd-20547313dfa4'
                 } 
             }
         );
