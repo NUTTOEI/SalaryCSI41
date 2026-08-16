@@ -369,19 +369,27 @@ async function loadLatestMembers() {
     }
     return [];
 }
-
-async function initApp() {
-    localStorage.setItem("fund-dashboard-mode", "month");
-    MEMBERS = await loadLatestMembers();
+async function loadTsrgetAmount() {
     try {
         const resTarget = await fetch("/api/settings/target", { cache: "no-store" });
         if (resTarget.ok) {
             const dataTarget = await resTarget.json();
-            TARGET_AMOUNT = Number(dataTarget.target) || 4000;
+            const val = Array.isArray(dataTarget) ? dataTarget[0]?.target : dataTarget.target;
+            TARGET_AMOUNT = Number(val) || 4000;
+        } else {
+            TARGET_AMOUNT = 4000;
         }
     } catch (e) {
         TARGET_AMOUNT = 4000;
     }
+}
+
+async function initApp() {
+    localStorage.setItem("fund-dashboard-mode", "month");
+    await Promise.all([
+        loadLatestMembers().then(m => { MEMBERS = m; }),
+        loadTargetAmount()
+    ]);
 
     const params = new URLSearchParams(location.search);
     const backTo = params.get("id");
@@ -391,6 +399,7 @@ async function initApp() {
         showHomeScreen();
     }
 }
+
 
 function getMemberStatus(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
@@ -441,33 +450,36 @@ function getMemberStatus(m) {
 initApp();
 
 window.addEventListener("storage", (e) => {
-    if (e.key === "fund-dashboard-members" || e.key === "fund-dashboard-target") {
-        if (e.key === "fund-dashboard-members" && e.newValue) MEMBERS = JSON.parse(e.newValue);
-        if (e.key === "fund-dashboard-target") TARGET_AMOUNT = typeof getTargetData === "function" ? getTargetData() : 0;
-        if (selectedId !== null) {
-            renderProfile();
+   if (e.key === "fund-dashboard-member") {
+        if (e.newValue) MEMBERS = JSON.parse(e.newValue);
+   }
+   if (e.key === "fund-dashboard-target") {
+        const localVal = Number(e.newValue);
+        if (!isNaN(localVal) && localVal > 0) {
+            TARGET_AMOUNT = localVal;
         } else {
-            renderHomeSummary();
-            renderUserList();
+            await loadTargetAmount();
         }
-    }
+   }
 
-    if (e.key === "fund-dashboard-mode") {
-        if (selectedId !== null) {
-            renderProfile();
-        } else {
-            renderHomeSummary();
-            renderUserList();
-        }
-    }
+   if (selectedId !== null) {
+        renderProfile();
+   } else {
+        renderHomeSummary();
+        renderUserList();
+   }
 });
 
 window.addEventListener("pageshow", async () => {
-        MEMBERS = await loadLatestMembers();
-        if (selectedId !== null) {
-            renderProfile();
-        } else {
-            renderHomeSummary();
-            renderUserList();
-        }
+    await Promise.all([
+        loadLatestMembers().then(m => { MEMBERS = m; }),
+        loadTargetAmount()
+    ]);
+
+    if (selectedId !== null) {
+        renderProfile();
+    } else {
+        renderHomeSummary();
+        renderUserList();
+    }
 });
