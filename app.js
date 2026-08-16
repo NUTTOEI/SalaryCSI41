@@ -255,7 +255,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             { data: qrCode.data },
             { 
                 headers: { 
-                    ...formData.getHeaders();
+                    ...formData.getHeaders(),
                     'x-authorization' : apiKey
                 } 
             }
