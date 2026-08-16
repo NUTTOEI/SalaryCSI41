@@ -8,7 +8,7 @@
     "jsqr": "^1.4.0",
     "multer": "^2.2.0",
     "mysql2": "^3.23.3",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.3"
   },
   "scripts": {
     "start": "node app.js"
