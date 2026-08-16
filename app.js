@@ -8,7 +8,6 @@ const crypto = require('crypto');
 const sharp = require('sharp');
 const jsQR = require('jsqr');
 const axios = require('axios');
-const { createWorker } = require('tesseract.js');
 const path = require('path');
 
 const { pool, testConnection } = require('./db');
