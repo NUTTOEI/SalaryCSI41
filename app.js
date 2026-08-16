@@ -316,8 +316,9 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
     } catch (err) {
         console.error('❌ /verify-slip Error:', err.response?.data || err.message);
-        const errMsg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการตรวจสอบสลิป';
-        return res.status(500).json({ status: 'error', message: errMsg });
+        const errMsg = err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการตรวจสอบสลิป';
+        const statusCode = err.response?.status || 500;
+        return res.status(statusCode).json({ status: 'fail', message: errMsg });
     }
 });
 
