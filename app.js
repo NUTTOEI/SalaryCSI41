@@ -24,7 +24,7 @@ const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_ID = process.env.LINE_TARGET_ID;
-const EXPECTED_RECEIVER_NAME = "ปุณณ์เมธ ม่วงวิเชียร";
+const EXPECTED_RECEIVER_NAME = "ณัฐวัฒน์ สุดพูล";
 
 const DEFAULT_MONTHS = () => Array(12).fill(false);
 const DEFAULT_WEEKS = () => Array(52).fill(false);
