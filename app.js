@@ -282,9 +282,18 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         // 4. ตรวจสอบชื่อผู้รับโอน
         const receiverName = slipData.receiver?.name || '';
-        const nameUpper = receiverName.toUpperCase();
+        const receiverUpper = receiverName.toUpperCase();
 
-        if (!receiverName.includes("ณัฐวัฒน์") && !nameUpper.includes("NATTAWAT")) {
+        const ALLOWED_RECEIVERS = [
+            "ณัฐวัฒน์", "สุดพูล", "์NATTAWAT", "SUDPOOL", "SUTPOOL",
+
+            // "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNNAMETH", "MUANGWICHIAN",
+        ];
+
+        const isReceiverValid = ALLOWED_RECEIVERS.some(keyword => keyword.trim() !== '' && receiverUpper.includes(keyword.toUpperCase())
+    );
+
+        if (!isReceiverValid) {
             return res.status(400).json({
                 status: 'fail',
                 message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
