@@ -23,7 +23,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
-const LINE_TARGET_ID = process.env.LINE_TARGET_ID;
+const LINE_TARGET_IDS = [
+    process.env.LINE_TARGET_ID,
+    'Ufac721db10fe012f12410f3cf59c3eb7'
+]
 const EXPECTED_RECEIVER_NAME = "ณัฐวัฒน์ สุดพูล";
 
 const DEFAULT_MONTHS = () => Array(12).fill(false);
@@ -318,13 +321,20 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             `📄 เลขที่รายการ: ${transRef}\n` +
             `⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
 
-        if (LINE_TARGET_ID && LINE_ACCESS_TOKEN) {
+        if (LINE_ACCESS_TOKEN && LINE_TARGET_IDS.length > 0) {
             await axios.post(
-                'https://api.line.me/v2/bot/message/push',
-                { to: LINE_TARGET_ID, messages: [{ type: 'text', text: messageText }] },
-                { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` } }
-            );
-        }
+                'https://api.line.me/v2/bot/message/multicast',
+                { 
+                    to: LINE_TARGET_ID, 
+                    messages: [{ type: 'text', text: messageText }] 
+                },
+                { headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` 
+                } 
+            }
+        );
+    }
 
         return res.json({ status: 'success', message: 'ตรวจสอบสลิปสำเร็จ' });
 
@@ -342,6 +352,18 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'member.html'));
 });
+
+app.post('/webhook', (req, res) => {
+    const events = req.body.events || [];
+    events.forEach(event => {
+        if (event.source && event.source.userId) {
+            console.log('====================================');
+            console.log('User ID ของคนที่ทักมา:', event.source.userId);
+            console.log('====================================');
+        }
+    });
+    res.sendStatus(200);
+})
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
