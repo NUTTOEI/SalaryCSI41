@@ -240,7 +240,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
-        const apiKey = (process.env.SLIPOK_API_KEY || 'SLIPOKNH25O4H').trim();
+        const apiKey = (process.env.SLIPOK_API_KEY || 'SLIPOKT51XVYS').trim();
         const branchId = '73437';
 
         // สร้าง FormData เพื่อส่งไฟล์รูปภาพสลิปตรงไปยัง SlipOK
