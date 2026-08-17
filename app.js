@@ -24,7 +24,7 @@ const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_ID = process.env.LINE_TARGET_ID;
-const EXPECTED_RECEIVER_NAME = "ณัฐวัฒน์ สุดพูล";
+const EXPECTED_RECEIVER_NAME = "ปุณณ์เมธ ม่วงวิเชียร";
 
 const DEFAULT_MONTHS = () => Array(12).fill(false);
 const DEFAULT_WEEKS = () => Array(52).fill(false);
@@ -284,7 +284,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const receiverName = slipData.receiver?.name || '';
         const nameUpper = receiverName.toUpperCase();
 
-        if (!receiverName.includes("ณัฐวัฒน์") && !nameUpper.includes("NATTHAWAT")) {
+        if (!receiverName.includes("ปุณณ์เมธ") && !nameUpper.includes("PUNNAMETH")) {
             return res.status(400).json({
                 status: 'fail',
                 message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
