@@ -284,7 +284,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const receiverName = slipData.receiver?.name || '';
         const nameUpper = receiverName.toUpperCase();
 
-        if (!receiverName.includes("ปุณณ์เมธ") && !nameUpper.includes("PUNNAMETH")) {
+        if (!receiverName.includes("ณัฐวัฒน์") && !nameUpper.includes("NATTAWAT")) {
             return res.status(400).json({
                 status: 'fail',
                 message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
