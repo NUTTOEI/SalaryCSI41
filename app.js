@@ -285,7 +285,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const receiverUpper = receiverName.toUpperCase();
 
         const ALLOWED_RECEIVERS = [
-            "ณัฐวัฒน์", "สุดพูล", "์NATTAWAT", "SUDPOOL", "SUTPOOL",
+            "ณัฐวัฒน์", "สุดพูล", "์NATTHAWAT", "NATTAWAT", "SUDPOOL", "SUTPOOL",
 
             // "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNNAMETH", "MUANGWICHIAN",
         ];
