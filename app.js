@@ -282,7 +282,9 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         // 4. ตรวจสอบชื่อผู้รับโอน
         const receiverName = slipData.receiver?.name || '';
-        if (!receiverName.includes("ณัฐวัฒน์") && !receiverName.includes("NATTHAWAT")) {
+        const nameUpper = receiverName.toUpperCase();
+
+        if (!receiverName.includes("ณัฐวัฒน์") && !nameUpper.includes("NATTHAWAT")) {
             return res.status(400).json({
                 status: 'fail',
                 message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
