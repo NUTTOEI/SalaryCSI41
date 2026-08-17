@@ -2,7 +2,7 @@
 //     if (document.getElementById('qr-name')) {
 //         document.getElementById('qr-name').textContent = (typeof ROOM !== 'undefined' && ROOM.promptpayName)
 //             ? ROOM.promptpayName
-//             : "นายณัฐวัฒน์ สุดพูล";
+//             : "นายปุณณ์เมธ ม่วงวิเชียร";
 //     }
 
 //     const COLLECTION_MODE = localStorage.getItem("fund-dashboard-mode") || "month";
@@ -229,7 +229,7 @@
 //     function updateQRCode() {
 //         const promptpayAccount = (typeof ROOM !== 'undefined' && ROOM.promptpayId)
 //             ? ROOM.promptpayId
-//             : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0863481103");
+//             : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0849731038");
 
 //         const isMonthMode = COLLECTION_MODE === "month";
 //         const selectedCount = isMonthMode ? selectedMonths.length : selectedWeeks.length;
