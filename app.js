@@ -241,7 +241,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         }
 
         const apiKey = (process.env.SLIPOK_API_KEY || 'SLIPOKT51XVYS').trim();
-        const branchId = '73437';
+        const branchId = '70172';
 
         // สร้าง FormData เพื่อส่งไฟล์รูปภาพสลิปตรงไปยัง SlipOK
         const formData = new FormData();
