@@ -24,7 +24,7 @@ const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_IDS = [
-    process.env.LINE_TARGET_ID,
+    process.env.LINE_TARGET_IDS,
     'Ufac721db10fe012f12410f3cf59c3eb7'
 ]
 const EXPECTED_RECEIVER_NAME = "ณัฐวัฒน์ สุดพูล";
