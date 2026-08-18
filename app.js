@@ -232,6 +232,20 @@ app.put('/api/settings/target', async (req, res) => {
     }
 });
 
+app.put('/api/admin/members/amount-all', async (req, res) => {
+    try {
+        const rate = Number(req.body.amount);
+        if (!isFinite(rate) || rate < 0) {
+            return res.status(400).json({ status: 'error', message: 'ยอดเงินไม่ถูกต้องๅ' });
+        }
+        await pool.query('UPDATE members SET amount = ?', [rate]);
+        res.json({ status: 'success' });
+    } catch (err) {
+        console.error('PUT /api/admin/members/amount-all error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
 /* ------------------------------------------------------------------ */
 /*  ระบบตรวจสลิปโอนเงิน + แจ้งเตือน LINE (ย้ายมาจาก scanQR.js เดิม)      */
 /* ------------------------------------------------------------------ */

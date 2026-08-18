@@ -20,15 +20,13 @@ function safeFmtMoney(val) {
     return typeof fmtMoney === "function" ? fmtMoney(val) : `฿${Number(val || 0).toLocaleString()}`;
 }
 
-
 let selectedAdminMonth = new Date().getMonth();
-
 let state = { query: "", filter: "all", sort: "index", ratePreview: 100 };
 
 function isMemberPaidCurrent(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
     if (mode === "month") {
-        const currentMonth = getActiveMonthIndex(); // ดึงเดือนปัจจุบัน (0 = ม.ค., 7 = ส.ค.)
+        const currentMonth = getActiveMonthIndex();
         const paidMonths = m.paidMonths || Array(12).fill(false);
         return Boolean(paidMonths[currentMonth]);
     } else {
@@ -86,7 +84,7 @@ async function togglePaid(id) {
         body: JSON.stringify({ memberId: id, mode, monthIndex: currentMonth, weekIndex: activeWeek })
     });
 
-    await loadFromStorage(); // ดึงข้อมูลใหม่มาแสดงผล
+    await loadFromStorage();
 }
 
 function openResetModal() {
@@ -99,7 +97,6 @@ function closeResetModal() {
     if (modal) modal.style.display = "none";
 }
 
-// ===== ฟังก์ชันรีเซ็ตระบบจ่ายเงินทั้งหมด =====
 async function resetAllPayments() {
     await fetch("/api/admin/reset", { method: "POST" });
     await loadFromStorage();
@@ -114,20 +111,7 @@ function setRatePreview(v) {
     state.ratePreview = isFinite(n) && n >= 0 ? n : state.ratePreview;
 }
 
-app.put('/api/admin/members/amount-all', async (req, res) => {
-    try {
-        const rate = Number(req.body.amount);
-        if (!isFinite(rate) || rate < 0) {
-            return res.status(400).json({ status: 'error', message: 'ยอดเงินไม่ถูกต้องๅ' });
-        }
-        await pool.query('UPDATE member SET amount = ?', [rate]);
-        res.json({ status: 'success' });
-    } catch (err) {
-        console.error('PUT /api/admin/members/amount-all error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
+// อัปเดตยอดเงินทุกคนผ่าน API
 async function applyRateToAll() {
     try {
         await fetch('/api/admin/members/amount-all', {
@@ -263,7 +247,6 @@ async function saveEditAmount(memberId) {
 }
 
 document.addEventListener("click", (e) => {
-
     const saveTargetBtn = e.target.closest("#btn-save-target");
     if (saveTargetBtn) {
         saveTargetAmount();
@@ -422,7 +405,7 @@ async function loadFromStorage() {
         if (response.ok) {
             MEMBERS = await response.json();
         }
-        render()
+        render();
     } catch (e) {
         console.error("ดึงข้อมูลจาก MySQL ล้มเหลว:", e);
     }
@@ -479,18 +462,6 @@ if (document.getElementById("stat-target")) {
     document.getElementById("stat-target").addEventListener("click", openTargetModal);
 }
 
-// document.addEventListener("keydown", (e) => {
-//     const modal = document.getElementById("target-modal");
-//     if (modal && modal.style.display === "flex") {
-//         if (e.key === "Enter") {
-//             e.preventDefault();
-//             saveTargetAmount();
-//         } else if (e.key === "Escape") {
-//             closeTargetModal();
-//         }
-//     }
-// });
-
 function getCollectionMode() {
     return localStorage.getItem("fund-dashboard-mode") || "month";
 }
@@ -518,8 +489,6 @@ function initAdminApp() {
     loadFromStorage();
     setupBranchTitle();
 }
-
-
 
 function getMemberStatus(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
@@ -581,7 +550,7 @@ function loadBranchTitle() {
     }
 }
 
-    function setupBranchTitle() {
+function setupBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
 
