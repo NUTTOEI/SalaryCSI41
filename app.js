@@ -24,7 +24,7 @@ const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_IDS = [
-    process.env.LINE_TARGET_IDS,
+    process.env.LINE_TARGET_ID,
     'Ufac721db10fe012f12410f3cf59c3eb7',
     'Uf963df571b9d63db04690e4801fe1439',
     'U240ca012882ab72b27e01377a6554632'
