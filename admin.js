@@ -114,15 +114,31 @@ function setRatePreview(v) {
     state.ratePreview = isFinite(n) && n >= 0 ? n : state.ratePreview;
 }
 
+app.put('/api/admin/members/amount-all', async (req, res) => {
+    try {
+        const rate = Number(req.body.amount);
+        if (!isFinite(rate) || rate < 0) {
+            return res.status(400).json({ status: 'error', message: 'ยอดเงินไม่ถูกต้องๅ' });
+        }
+        await pool.query('UPDATE member SET amount = ?', [rate]);
+        res.json({ status: 'success' });
+    } catch (err) {
+        console.error('PUT /api/admin/members/amount-all error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
 async function applyRateToAll() {
-    for (const m of MEMBERS) {
-        await fetch(`/api/admin/members/${m.id}/amount`, {
+    try {
+        await fetch('/api/admin/members/amount-all', {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ amount: state.ratePreview })
         });
+        await loadFromStorage();
+    } catch (error) {
+        console.error("Error update all rates:", error);
     }
-    await loadFromStorage();
 }
 
 async function addMember(name) {
