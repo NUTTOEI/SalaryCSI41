@@ -325,7 +325,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             await axios.post(
                 'https://api.line.me/v2/bot/message/multicast',
                 { 
-                    to: LINE_TARGET_ID, 
+                    to: LINE_TARGET_IDS, 
                     messages: [{ type: 'text', text: messageText }] 
                 },
                 { headers: { 
