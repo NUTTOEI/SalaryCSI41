@@ -517,7 +517,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     function updateQRCode() {
         const promptpayAccount = (typeof ROOM !== 'undefined' && ROOM.promptpayId)
             ? ROOM.promptpayId
-            : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0863481103");
+            : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0849731038");
 
         const totalAmount = selectedMonths.length * rate;
 
