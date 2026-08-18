@@ -25,11 +25,11 @@ const processedSlips = new Set();
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_IDS = [
     process.env.LINE_TARGET_ID,
-    'Ufac721db10fe012f12410f3cf59c3eb7',
-    'Uf963df571b9d63db04690e4801fe1439',
-    'U240ca012882ab72b27e01377a6554632'
+    'Ufac721db10fe012f12410f3cf59c3eb7', // นัท ณัฐวัฒน์
+    'Uf963df571b9d63db04690e4801fe1439' // ฟิล์ม ปุณณ์เมธ
+   
 ]
-const EXPECTED_RECEIVER_NAME = "ณัฐวัฒน์ สุดพูล";
+const EXPECTED_RECEIVER_NAME = "ปุณณ์เมธ ม่วงวิเชียร";
 
 const DEFAULT_MONTHS = () => Array(12).fill(false);
 const DEFAULT_WEEKS = () => Array(52).fill(false);
@@ -290,9 +290,9 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const receiverUpper = receiverName.toUpperCase();
 
         const ALLOWED_RECEIVERS = [
-            "ณัฐวัฒน์", "สุดพูล", "NATTHAWAT", "NATTAWAT", "SUDPOOL", "SUTPOOL",
+            // "ณัฐวัฒน์", "สุดพูล", "NATTHAWAT", "NATTAWAT", "SUDPOOL", "SUTPOOL",
 
-            // "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNNAMETH", "MUANGWICHIAN",
+            "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNMETH", "PUNNAMETH", "MUANGWICHIAN",
         ];
 
         const isReceiverValid = ALLOWED_RECEIVERS.some(keyword => keyword.trim() !== '' && receiverUpper.includes(keyword.toUpperCase())

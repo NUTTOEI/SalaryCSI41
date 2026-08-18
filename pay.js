@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById('qr-name')) {
         document.getElementById('qr-name').textContent = (typeof ROOM !== 'undefined' && ROOM.promptpayName)
             ? ROOM.promptpayName
-            : "นายณัฐวัฒน์ สุดพูล";
+            : "นายปุณณ์เมธ ม่วงวิเชียร";
     }
 
     const COLLECTION_MODE = localStorage.getItem("fund-dashboard-mode") || "month";
