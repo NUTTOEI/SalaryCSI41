@@ -26,6 +26,7 @@ const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_IDS = [
     process.env.LINE_TARGET_ID,
     'Ufac721db10fe012f12410f3cf59c3eb7', // นัท ณัฐวัฒน์
+    'Ub0a8c9b3819bac10a968319bce489c2a' // สุพรรณณิกา คงคาศรี
     // 'Uf963df571b9d63db04690e4801fe1439' // ฟิล์ม ปุณณ์เมธ
    
 ]
@@ -311,8 +312,9 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         const ALLOWED_RECEIVERS = [
             // "ณัฐวัฒน์", "สุดพูล", "NATTHAWAT", "NATTAWAT", "SUDPOOL", "SUTPOOL",
+            "สุพรรณณิกา", "คงคาศรี",
 
-            "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNMETH", "PUNNAMET", "MUANGWICHIAN",
+            // "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNMETH", "PUNNAMET", "MUANGWICHIAN",
         ];
 
         const isReceiverValid = ALLOWED_RECEIVERS.some(keyword => keyword.trim() !== '' && receiverUpper.includes(keyword.toUpperCase())
