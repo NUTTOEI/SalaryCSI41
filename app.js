@@ -312,7 +312,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         const ALLOWED_RECEIVERS = [
             // "ณัฐวัฒน์", "สุดพูล", "NATTHAWAT", "NATTAWAT", "SUDPOOL", "SUTPOOL",
-            "สุพรรณณิกา", "คงคาศรี", "SUPHANIKA", "KHONGKASRI",
+            "สุพรรณณิกา", "คงคาศรี", "SUPHANNIKA", "KHONGKASRI",
 
             // "ปุณณ์เมธ", "ม่วงวิเชียร", "PUNMETH", "PUNNAMET", "MUANGWICHIAN",
         ];
