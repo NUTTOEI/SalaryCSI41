@@ -30,7 +30,7 @@ const LINE_TARGET_IDS = [
     // 'Uf963df571b9d63db04690e4801fe1439' // ฟิล์ม ปุณณ์เมธ
    
 ]
-const EXPECTED_RECEIVER_NAME = "ปุณณ์เมธ ม่วงวิเชียร";
+const EXPECTED_RECEIVER_NAME = "สุพรรณณิกา คงคาศรี";
 
 const DEFAULT_MONTHS = () => Array(12).fill(false);
 const DEFAULT_WEEKS = () => Array(52).fill(false);
