@@ -58,7 +58,16 @@ function rowToMember(row) {
 
 app.get('/api/members', async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM members');
+        const { branch } = req.query;
+        let sql = "SELECT * FROM members";
+        let params = [];
+
+        if (branch) {
+            sql += " WHERE branch = ?";
+            params.push(branch);
+        }
+
+        const [rows] = await pool.query(sql, params);
         res.json(rows.map(rowToMember));
     } catch (err) {
         console.error('GET /api/members error:', err);
@@ -68,37 +77,46 @@ app.get('/api/members', async (req, res) => {
 
 // GET /api/members — ที่ admin.js / member.js / pay.js เรียกทุกครั้งตอนโหลดหน้า
 app.put('/api/members/:id', async (req, res) => {
-    const { id } = req.params;
-    const { paidMonths, paidWeeks, history } = req.body;
     try {
+        const { id } = req.params;
+        const { paidMonths, paidWeeks, history } = req.body;
+        
         await pool.query(
-            'UPDATE members SET paid_months = ?, paid_weeks = ?, history = ? WHERE id = ?',
+            `UPDATE members
+            SET name = COALESCE(?, name),
+                branch = COALESCE(?, branch),
+                paid_months = COALESCE(?, paid_months),
+                history = COALESCE(?, history)
+            WHERE id = ?`,
             [
-                JSON.stringify(paidMonths || DEFAULT_MONTHS()),
-                JSON.stringify(paidWeeks || DEFAULT_WEEKS()),
-                JSON.stringify(history || []),
+                name || null,
+                branch || null,
+                paidMonths ? JSON.stringify(paidMonths) : null,
+                history ? JSON.stringify(history) : null,
                 id
             ]
         );
-        res.json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });
-    } catch (err) {
-        console.error('PUT /api/members/:id error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
+
+        res.json({ status: "success", message: "Update successfully" });
+    } catch (error) {
+        res.status(500).json({ status: "error", message: error.message });
     }
 });
 
 // POST /api/admin/members — เพิ่มสมาชิกใหม่ { name, amount }
 app.post('/api/admin/members', async (req, res) => {
     try {
-        const { name, amount } = req.body;
+        const { name, amount, branch } = req.body;
         if (!name || !String(name).trim()) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุชื่อ' });
         }
         const rate = Number(amount) || 100;
+        const memberBranch = branch || 'comsci41';
+
         const [result] = await pool.query(
             `INSERT INTO members (branch, name, amount, paid_months, paid_weeks, history)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            ['comsci41', String(name).trim(), rate, JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
+            ['memberBramch', String(name).trim(), rate, JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
         );
         const [rows] = await pool.query('SELECT * FROM members WHERE id = ?', [result.insertId]);
         res.json({ status: 'success', member: rowToMember(rows[0]) });
