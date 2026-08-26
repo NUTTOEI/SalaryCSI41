@@ -79,7 +79,7 @@ app.get('/api/members', async (req, res) => {
 app.put('/api/members/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { paidMonths, paidWeeks, history } = req.body;
+        const { name, branch, paidMonths, paidWeeks, history } = req.body;
         
         await pool.query(
             `UPDATE members
@@ -103,7 +103,7 @@ app.put('/api/members/:id', async (req, res) => {
     }
 });
 
-// POST /api/admin/members — เพิ่มสมาชิกใหม่ { name, amount }
+// POST /api/admin/members — เพิ่มสมาชิกใหม่ { name, amount, branch }
 app.post('/api/admin/members', async (req, res) => {
     try {
         const { name, amount, branch } = req.body;
@@ -116,7 +116,7 @@ app.post('/api/admin/members', async (req, res) => {
         const [result] = await pool.query(
             `INSERT INTO members (branch, name, amount, paid_months, paid_weeks, history)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            ['memberBramch', String(name).trim(), rate, JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
+            ['memberBranch', String(name).trim(), rate, JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
         );
         const [rows] = await pool.query('SELECT * FROM members WHERE id = ?', [result.insertId]);
         res.json({ status: 'success', member: rowToMember(rows[0]) });
@@ -359,7 +359,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const messageText =
             `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n` +
             `🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n` +
-            `👤 ผู้รับ: ${slipData.receiver.name}\n` +
+            `👤 ผู้รับ: ${slipData.receiver?.name || 'ไม่ระบุ'}\n` +
             `💰 ยอดเงิน: ${slipData.amount} บาท\n` +
             `📄 เลขที่รายการ: ${transRef}\n` +
             `⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
