@@ -68,7 +68,7 @@ app.get('/api/members', async (req, res) => {
     try {
        const { branch } = req.query;
 
-        if (branch) {
+        if (!branch) {
             return res.json([]);
         }
 
@@ -120,7 +120,7 @@ app.post('/api/admin/members', async (req, res) => {
         if (!branch) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา (branch)' });
         }
-        
+
         const rate = Number(amount) || 100;
         const memberBranch = branch || 'comsci41';
 
