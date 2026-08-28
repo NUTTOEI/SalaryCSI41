@@ -90,6 +90,44 @@
             </div>
         </div>
 
+        <button class="menu-toggle-btn" onclick="toggleSlieMenu()">
+            <i class="ti ti-menu-2"</i>
+        </button>
+
+        <div id="slideMenuOverlay" class="slide-menu-overlay" onclick="toggleSlieMenu()"></div>
+        <div id="slideMenu" class="slide-menu">
+            <div class="slide-menu-header">
+                <h3>เมนูสมาชิก</h3>
+                <button class="close-btn" onclick="toggleSlideMenu()">
+                    <i class="ti ti-x"></i>
+                </button>
+            </div>
+
+            <div class="slide-menu-body">
+                <div class="user-info-box">
+                    <i class="ti ti-user-circle"></i>
+                    </div>
+                        <div class="user-name" id="menuUserName">สมาชิก</div>
+                        <div class="user-branch" id="menuUserBranch">สาขา -</div>
+                    </div>
+                </div>
+
+                <ul class="menu-list">
+                    <li>
+                        <a href="#" onclick="showHomeScreen(); toggleSlideMenu();">
+                            <i class="ti ti-home"></i> หน้าหลัก
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="slide-menu-footer">
+                <button class="login-btn" onclick="logoutMember()">
+                    <i class="ti ti-logout"></i> ออกจากระบบ
+                </button>
+            </div>
+        </div>
+
         <script src="data.js"></script>
         <script src="member.js"></script>
     </body>

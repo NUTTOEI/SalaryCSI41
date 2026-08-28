@@ -383,6 +383,7 @@ async function loginMember() {
 
         if (data.success) {
             sessionStorage.setItem("memberBranch", data.branch);
+            if (data.name) sessionStorage.setItem("memberName", data.name);
             currentBranch = data.branch;
 
             const modal = document.getElementById("loginModal");
@@ -457,6 +458,11 @@ async function initApp() {
     } else {
         showHomeScreen();
     }
+
+    const nameEl = document.getElementById("menuUserName");
+    const branchEl = document.getElementById("menuUserBranch");
+    if (nameEl) nameEl.textContent = sessionStorage.getItem("memberName") || "สมาชิก";
+    if (branchEl) branchEl.textContent = `สาขา: ${currentBranch || "-"}`;
 }
 
 
@@ -542,3 +548,31 @@ window.addEventListener("pageshow", async () => {
         renderUserList();
     }
 });
+
+function toggleSlidMenu() {
+    const overlay = document.getElementById("slidMenuOverlay");
+    const menu = document.getElementById("slidMenu");
+    if (overlay && menu) {
+        overlay.classList.toggle("active");
+        menu.classList.toggle("active");
+    }
+}
+
+function logoutMember() {
+    if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+        sessionStorage.removeItem("memberBranch");
+        sessionStorage.removeItem("memberName");
+        currentBranch = null;
+
+        const overlay = document.getElementById("slidMenuOverlay");
+        const menu = document.getElementById("slideMenu");
+        if (overlay) overlay.classList.remove("active");
+        if (menu) menu.classList.remove("active");
+
+        const input = document.getElementById("memberStudentId");
+        if (input) input.value = "";
+
+        const modal  = document.getElementById("loginModal");
+        if (modal) modal.style.display = "flex";
+    }
+}

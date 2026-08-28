@@ -1154,3 +1154,159 @@ button, input {
 .login-modal-card button:hover {
     background: #453370;
 }
+
+/* ปุ่มเปิดเมนูบน Header */
+.menu-toggle-btn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: #241F2E;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Overlay ฉากหลังดำโปร่งแสง */
+.slide-menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.slide-menu-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ตัวกล่อง Slide Menu */
+.slide-menu {
+    position: fixed;
+    top: 0;
+    right: -300px;
+    width: 280px;
+    height: 100%;
+    background: #ffffff;
+    z-index: 999;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-menu.active {
+    right: 0;
+}
+
+.slide-menu-header {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.slide-menu-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #241F2E;
+    font-family: 'Kanit', sans-serif;
+}
+
+.slide-menu-header .close-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #8A8296;
+}
+
+.slide-menu-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* การ์ดแสดงโปรไฟล์ผู้ใช้ในเมนู */
+.user-info-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #f8f6fb;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.user-info-box i {
+    font-size: 32px;
+    color: #5B4A8F;
+}
+
+.user-info-box .user-name {
+    font-weight: 600;
+    color: #241F2E;
+    font-size: 14px;
+}
+
+.user-info-box .user-branch {
+    font-size: 12px;
+    color: #8A8296;
+}
+
+.menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-list li a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    color: #241F2E;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.menu-list li a:hover {
+    background: #f4f0fa;
+    color: #5B4A8F;
+}
+
+/* ปุ่มออกจากระบบด้านล่างสุด */
+.slide-menu-footer {
+    padding: 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #fee2e2;
+    background: #fff5f5;
+    color: #e53e3e;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.logout-btn:hover {
+    background: #fed7d7;
+    color: #c53030;
+}
