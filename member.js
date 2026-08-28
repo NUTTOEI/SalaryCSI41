@@ -393,9 +393,14 @@ async function loginMember() {
             alert(data.message || "ไม่พบรหัสนักศึกษาในระบบ");
         }
     } catch (err) {
-        alert("เกิดข้อผิดพลาดในการเชื่อต่อเซิร์ฟเวอร์");
+        console.error("Login Error:", err);
+        alert("เกิดข้อผิดพลาด: " + err.message);
     }
 }
+
+// catch (err) {
+//         alert("เกิดข้อผิดพลาดในการเชื่อต่อเซิร์ฟเวอร์");
+//     }
 
 async function loadLatestMembers() {
     if (!currentBranch) return [];
