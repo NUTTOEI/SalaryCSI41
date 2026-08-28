@@ -278,7 +278,7 @@ app.post('/api/member/login', async (req, res) => {
     try {
         const { studentId } = req.body;
         if (!studentId || !studentId.trim()) {
-            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' })ว
+            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' })
         }
 
         const [rows] = await pool.query(
@@ -295,12 +295,12 @@ app.post('/api/member/login', async (req, res) => {
             branch: rows[0].branch,
             name: rows[0].name
         });
-        tch (err) {
-            console.error('Member Login Error:', err);
-            res.status(500).json({ success: false, message: err.message });
-        }
+    } catch (err) { 
+        console.error('Member Login Error:', err);
+        res.status(500).json({ success: false, message: err.message });
     }
-})
+});
+
 
 /* ------------------------------------------------------------------ */
 /* ระบบตรวจสลิปโอนเงิน + แจ้งเตือน LINE                                */
