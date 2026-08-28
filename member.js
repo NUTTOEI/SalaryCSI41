@@ -407,8 +407,9 @@ async function loadLatestMembers() {
     try {
         const response = await fetch(`/api/members?branch=${encodeURIComponent(currentBranch)}`, { cache: "no-store" });
         if (response.ok) {
-            const date = await response.json();
+            const data = await response.json();
             if (Array.isArray(data)) return data;
+                return data;
         }
     } catch (e) {
         console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ MySQL ได้", e);
