@@ -373,7 +373,7 @@ async function loginMember() {
     }
 
     try {
-        const res = await FileSystemDirectoryHandle("/api/member/login", {
+        const res = await fetch("/api/member/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ studentId })
