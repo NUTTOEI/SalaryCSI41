@@ -66,16 +66,13 @@ function rowToMember(row) {
 
 app.get('/api/members', async (req, res) => {
     try {
-        const { branch } = req.query;
-        let sql = "SELECT * FROM members";
-        let params = [];
+       const { branch } = req.query;
 
         if (branch) {
-            sql += " WHERE branch = ?";
-            params.push(branch);
+            return res.json([]);
         }
 
-        const [rows] = await pool.query(sql, params);
+        const [rows] = await pool.query("SELECT * FROM members WHERE branch = ?", [branch]);
         const members = rows.map(rowToMember);
         res.json(members);
     } catch (err) {
@@ -118,6 +115,12 @@ app.post('/api/admin/members', async (req, res) => {
         if (!name || !String(name).trim()) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุชื่อ' });
         }
+
+        // 🟢 [แก้ไข] ต้องระบุ branch เสมอ ห้ามใส่ค่า Default เป็น 'comsci41'
+        if (!branch) {
+            return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา (branch)' });
+        }
+        
         const rate = Number(amount) || 100;
         const memberBranch = branch || 'comsci41';
 
@@ -500,6 +503,17 @@ app.post('/api/admin/register', async (req, res) => {
         const { studentId, name, branch } = req.body;
         if (!studentId || !name || !branch) {
             return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+        }
+
+        const cleanBranch = branch.trim();
+
+        // 🟢 [เพิ่มจุดนี้] ตรวจสอบก่อนว่ามีสาขานี้ในตาราง branches หรือยัง ถ้ายังไม่มีให้เพิ่มอัตโนมัติ
+        const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
+        if (existingBranch.length === 0) {
+            await pool.query(
+                "INSERT INTO branches (branch_code, branch_name, profile_img) VALUES (?, ?, ?)",
+                [cleanBranch, cleanBranch, `${cleanBranch}.png`]
+            );
         }
 
         await pool.query(
