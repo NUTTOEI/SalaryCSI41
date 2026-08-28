@@ -274,6 +274,34 @@ app.put('/api/admin/members/amount-all', async (req, res) => {
     }
 });
 
+app.post('/api/member/login', async (req, res) => {
+    try {
+        const { studentId } = req.body;
+        if (!studentId || !studentId.trim()) {
+            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' })ว
+        }
+
+        const [rows] = await pool.query(
+            "SELECT branch, name FROM admins WHERE student_id = ?",
+            [studentId.trim()]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ' });
+        }
+
+        res.json({
+            success: true,
+            branch: rows[0].branch,
+            name: rows[0].name
+        });
+        tch (err) {
+            console.error('Member Login Error:', err);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    }
+})
+
 /* ------------------------------------------------------------------ */
 /* ระบบตรวจสลิปโอนเงิน + แจ้งเตือน LINE                                */
 /* ------------------------------------------------------------------ */

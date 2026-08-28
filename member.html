@@ -81,6 +81,15 @@
             </div>
         </div>
 
+        <div id="loginModal" class="login-modal-overlay">
+            <div class="login-modal-card">
+                <h2>เข้าสู่ระบบ</h2>
+                <p>กรอกรหัสนักศึกษาเข้าสู่ระบบ</p>
+                <input type="text" id="memberStudentId" placeholder="กรอกรหัสนักศึกษา..." onkeypress="if(event.key==='Enter') loginMember()">
+                <button onclick="loginMember()">เข้าสู่ระบบ</button>
+            </div>
+        </div>
+
         <script src="data.js"></script>
         <script src="member.js"></script>
     </body>
