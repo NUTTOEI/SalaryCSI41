@@ -80,7 +80,10 @@ app.get('/api/members', async (req, res) => {
             return res.json(members);
         }
 
-        res.json([]);
+        const [rows] = await pool.query("SELECT * FROM members");
+        const members = rows.map(rowToMember);
+        res.json(members);
+
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
     }
