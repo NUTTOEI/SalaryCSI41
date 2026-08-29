@@ -111,7 +111,12 @@ app.put('/api/members/:id', async (req, res) => {
 
 app.post('/api/admin/members', async (req, res) => {
     try {
-        const { name, amount, branch } = req.body;
+        const {studentId, name, amount, branch } = req.body;
+
+        if (!studentId || !String(studentId).trim()) {
+            return res.status(400).json({ status: 'error', message: 'กรุณาระบุรหัสนักศึกษา' });
+        }
+
         if (!name || !String(name).trim()) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุชื่อ' });
         }
@@ -125,9 +130,17 @@ app.post('/api/admin/members', async (req, res) => {
         const memberBranch = branch || 'comsci41';
 
         const [result] = await pool.query(
-            `INSERT INTO members (branch, name, amount, paid_months, paid_weeks, history)
+            `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [memberBranch, String(name).trim(), rate, JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
+            [
+                String(studentId).trim(),
+                memberBranch, 
+                String(name).trim(), 
+                rate, 
+                JSON.stringify(DEFAULT_MONTHS()), 
+                JSON.stringify(DEFAULT_WEEKS()), 
+                JSON.stringify([])
+            ]
         );
         const [rows] = await pool.query('SELECT * FROM members WHERE id = ?', [result.insertId]);
         res.json({ status: 'success', member: rowToMember(rows[0]) });
@@ -282,7 +295,7 @@ app.post('/api/member/login', async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            "SELECT branch, name FROM admins WHERE student_id = ?",
+            "SELECT id, student_id, branch, name FROM members WHERE student_id = ?",
             [studentId.trim()]
         );
 
