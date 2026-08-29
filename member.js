@@ -445,7 +445,7 @@ async function initApp() {
     const roomEl = document.getElementById("room-title");
     if (roomEl) roomEl.textContent = `เงินรวมสาขา (${currentBranch})`;
 
-    localStorage.setItem("fung-dashboard-mode", "month");
+    localStorage.setItem("fund-dashboard-mode", "month");
     await Promise.all([
         loadLatestMembers().then(m => { MEMBERS = m; }),
         loadTargetAmount()
@@ -549,9 +549,9 @@ window.addEventListener("pageshow", async () => {
     }
 });
 
-function toggleSlidMenu() {
-    const overlay = document.getElementById("slidMenuOverlay");
-    const menu = document.getElementById("slidMenu");
+function toggleSlideMenu() {
+    const overlay = document.getElementById("slideMenuOverlay");
+    const menu = document.getElementById("slideMenu");
     if (overlay && menu) {
         overlay.classList.toggle("active");
         menu.classList.toggle("active");
@@ -564,7 +564,7 @@ function logoutMember() {
         sessionStorage.removeItem("memberName");
         currentBranch = null;
 
-        const overlay = document.getElementById("slidMenuOverlay");
+        const overlay = document.getElementById("slideMenuOverlay");
         const menu = document.getElementById("slideMenu");
         if (overlay) overlay.classList.remove("active");
         if (menu) menu.classList.remove("active");
