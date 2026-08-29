@@ -361,56 +361,12 @@ if (searchInput) {
     });
 }
 
-let currentBranch = sessionStorage.getItem("memberBranch") || null;
-
-async function loginMember() {
-    const input = document.getElementById("memberStudentId");
-    const studentId = input ? input.value.trim() : "";
-
-    if (!studentId) {
-        alert("กรุณากรอกรหัสนักศึกษา");
-        return;
-    }
-
-    try {
-        const res = await fetch("/api/member/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ studentId })
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            sessionStorage.setItem("memberBranch", data.branch);
-            if (data.name) sessionStorage.setItem("memberName", data.name);
-            currentBranch = data.branch;
-
-            const modal = document.getElementById("loginModal");
-            if (modal) modal.style.display = "none";
-
-            await initApp();
-        } else {
-            alert(data.message || "ไม่พบรหัสนักศึกษาในระบบ");
-        }
-    } catch (err) {
-        console.error("Login Error:", err);
-        alert("เกิดข้อผิดพลาด: " + err.message);
-    }
-}
-
-// catch (err) {
-//         alert("เกิดข้อผิดพลาดในการเชื่อต่อเซิร์ฟเวอร์");
-//     }
-
 async function loadLatestMembers() {
-    if (!currentBranch) return [];
     try {
-        const response = await fetch(`/api/members?branch=${encodeURIComponent(currentBranch)}`, { cache: "no-store" });
+        const response = await fetch("/api/members", { cache: "no-store" });
         if (response.ok) {
             const data = await response.json();
-            if (Array.isArray(data)) return data;
-                return data;
+            if (Array.isArray(data) && data.length > 0) return data;
         }
     } catch (e) {
         console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ MySQL ได้", e);
@@ -433,18 +389,6 @@ async function loadTargetAmount() {
 }
 
 async function initApp() {
-    const modal = document.getElementById("loginModal");
-
-    if (!currentBranch) {
-        if (modal) modal.style.display = "flex";
-        return;
-    } else {
-        if (modal) modal.style.display = "none";
-    }
-
-    const roomEl = document.getElementById("room-title");
-    if (roomEl) roomEl.textContent = `เงินรวมสาขา (${currentBranch})`;
-
     localStorage.setItem("fund-dashboard-mode", "month");
     await Promise.all([
         loadLatestMembers().then(m => { MEMBERS = m; }),
@@ -458,11 +402,6 @@ async function initApp() {
     } else {
         showHomeScreen();
     }
-
-    const nameEl = document.getElementById("menuUserName");
-    const branchEl = document.getElementById("menuUserBranch");
-    if (nameEl) nameEl.textContent = sessionStorage.getItem("memberName") || "สมาชิก";
-    if (branchEl) branchEl.textContent = `สาขา: ${currentBranch || "-"}`;
 }
 
 
@@ -548,4 +487,3 @@ window.addEventListener("pageshow", async () => {
         renderUserList();
     }
 });
-
