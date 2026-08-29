@@ -549,30 +549,3 @@ window.addEventListener("pageshow", async () => {
     }
 });
 
-function toggleSlideMenu() {
-    const overlay = document.getElementById("slideMenuOverlay");
-    const menu = document.getElementById("slideMenu");
-    if (overlay && menu) {
-        overlay.classList.toggle("active");
-        menu.classList.toggle("active");
-    }
-}
-
-function logoutMember() {
-    if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
-        sessionStorage.removeItem("memberBranch");
-        sessionStorage.removeItem("memberName");
-        currentBranch = null;
-
-        const overlay = document.getElementById("slideMenuOverlay");
-        const menu = document.getElementById("slideMenu");
-        if (overlay) overlay.classList.remove("active");
-        if (menu) menu.classList.remove("active");
-
-        const input = document.getElementById("memberStudentId");
-        if (input) input.value = "";
-
-        const modal = document.getElementById("loginModal");
-        if (modal) modal.style.display = "flex";
-    }
-}
