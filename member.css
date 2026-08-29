@@ -1089,82 +1089,133 @@ button, input {
     margin-bottom: 6px;
 }
 
-.login-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(36, 31, 46, 0.75);
-    backdrop-filter: blur(4px);
+.card-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.input-card {
+    background: var(--paper-raised);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    box-shadow: var(--shadow-lift);
+    text-align: center;
+    width: 100%;
+    max-width: 380px;
+    border: 1px solid var(--line);
+}
+
+.card-icon {
+    width: 56px;
+    height: 56px;
+    background: var(--brand-tint);
+    color: var(--brand);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    font-size: 28px;
+    margin: 0 auto 16px;
 }
 
-.login-modal-card {
-    background: #ffffff;
-    padding: 28px 24px;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 360px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.login-modal-card h2 {
+.input-card h3 {
     font-family: 'Kanit', sans-serif;
-    margin: 0 0 6px;
     font-size: 20px;
-    color: #241F2E;
+    margin: 0 0 6px 0;
+    color: var(--ink);
 }
 
-.login-modal-card p {
+.input-card p {
     font-size: 13px;
-    color: #8A8296;
-    margin-bottom: 20px;
+    color: var(--ink-soft);
+    margin: 0 0 20px 0;
 }
 
-.login-modal-card input {
+.form-group input {
     width: 100%;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1.5px solid #EAE4F0;
-    margin-bottom: 14px;
-    font-size: 15px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--line);
+    background: var(--paper);
     outline: none;
+    font-size: 16px;
+    font-family: 'Kanit', sans-serif;
+    text-align: center;
+    letter-spacing: 1px;
+    color: var(--brand-deep);
+    transition: all 0.2s ease;
     box-sizing: border-box;
 }
 
-.login-modal-card input:focus {
-    border-color: #5B4A8F;
+.form-group input:focus {
+    border-color: var(--brand);
+    background: var(--paper-raised);
+    box-shadow: 0 0 0 3px var(--brand-tint);
 }
 
-.login-modal-card button {
+.submit-btn {
     width: 100%;
-    padding: 12px;
-    border-radius: 12px;
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: var(--radius-md);
     border: none;
-    background: #5B4A8F;
-    color: white;
+    background: var(--brand);
+    color: #fff;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
-}
-
-.login-modal-card button:hover {
-    background: #453370;
-}
-
-/* ปุ่มเปิดเมนูบน Header */
-.menu-toggle-btn {
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    color: #241F2E;
-    cursor: pointer;
-    padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow);
+}
+
+.submit-btn:hover {
+    background: var(--brand-deep);
+    transform: translateY(-1px);
+}
+
+.error-msg {
+    color: var(--clay);
+    font-size: 12px;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* ---------- User Bar (แถบสลับรหัสผู้ใช้) ---------- */
+
+.user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--paper-raised);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+}
+
+.switch-user-btn {
+    background: none;
+    border: none;
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.switch-user-btn:hover {
+    background: var(--brand-tint);
 }
 

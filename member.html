@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <metaname="description"content="Comsci41">
+        <meta name="description"content="Comsci41">
 <meta name="robots" content="index, follow">
 <meta name="google-site-verification" content="member.html">
         <title>เงินรุ่น Comsci41</title>
@@ -20,7 +20,40 @@
                 <!-- <a href="admin.html" class="admin-link">สำหรับผู้ดูแล →</a> -->
             </div>
 
-            <div id="home-screen">
+            <div id="student-id-screen" class="card-screen">
+                <div class="input-card">
+                    <div class="card-icon">
+                        <i class="ti ti-id-badge-2"></i>
+                    </div>
+                    <h3>เข้าสู่ระบบ</h3>
+                    <p>กรุณากรอกรหัสนักศึกษา</p>
+
+                    <form id="student-id-form" onsubmit="handleStudentIdSubmit(event)">
+                        <div class="form-group">
+                            <input
+                                type="text"
+                                id="student-id-input"
+                                placeholder="เช่น 68xxxxxxxx"
+                                maxlength="13"
+                                required
+                            />
+                        </div>
+                        <div id="id-error-msg" class="error-msg hidden"></div>
+                        <button type="submit" class="submit-btn">
+                            <span>ตกลง / เข้าสู่ระบบ</span>
+                            <i class="ti ti-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="home-screen" class="hidden">
+                <div class="user-bar">
+                    <span id="current-user-info"></span>
+                    <button onclick="logoutStudentId()" class="switch-user-btn">
+                        <i class="ti ti-logout"></i> เปลี่ยนรหัส
+                    </button>
+                </div>
 
                 <!-- สรุปยอดเงินแบบใหม่ (วงกลมใหญ่) -->
                 <div class="jar-card summary-card-new">
@@ -49,13 +82,11 @@
                 </div>
 
                 <div class="list-label" id="list-label">รายชื่อสมาชิกทั้งหมด</div>
-
                 <div id="user-list" class="user-list"></div>
             </div>
 
             <div id="profile-screen" class="hidden">
                 <button class="back-btn" id="back-btn"><i class="ti ti-arrow-left"></i>กลับไปหน้ารายชื่อ</button>
-
                 <div class="profile-head">
                     <div class="profile-avatar" id="profile-avatar"></div>
                     <div class="profile-name" id="profile-name"></div>
@@ -70,6 +101,8 @@
                     </a>
                     <div class="status-note hidden" id="status-note"></div>
                 </div>
+
+                <div id="member-due-grid"></div>
 
                 <div class="history-card">
                     <div class="history-head">

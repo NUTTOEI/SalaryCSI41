@@ -2,6 +2,7 @@
 
 let selectedId = null;
 let searchQuery = "";
+let currentStudentId = localStorage.getItem("fund-dashboard-student-id") || null;
 
 if (typeof MEMBERS === "undefined") var MEMBERS = [];
 if (typeof TARGET_AMOUNT === "undefined") var TARGET_AMOUNT = 0;
@@ -322,24 +323,6 @@ function goToPayPage(memberId, type, index) {
     window.location.href = `pay.html?id=${memberId}&type=${type}&index=${index}`;
 }
 
-function showHomeScreen() {
-    selectedId = null;
-    const home = document.getElementById("home-screen");
-    const profile = document.getElementById("profile-screen");
-    if (home) home.classList.remove("hidden");
-    if (profile) profile.classList.add("hidden");
-    renderHomeSummary();
-    renderUserList();
-}
-
-function showProfileScreen(id) {
-    selectedId = id;
-    const home = document.getElementById("home-screen");
-    const profile = document.getElementById("profile-screen");
-    if (home) home.classList.add("hidden");
-    if (profile) profile.classList.remove("hidden");
-    renderProfile();
-}
 
 document.addEventListener("click", (e) => {
     const item = e.target.closest("[data-select-id]");
@@ -390,18 +373,23 @@ async function loadTargetAmount() {
 
 async function initApp() {
     localStorage.setItem("fund-dashboard-mode", "month");
-    await Promise.all([
-        loadLatestMembers().then(m => { MEMBERS = m; }),
-        loadTargetAmount()
-    ]);
+    await loadTargetAmount();
 
-    const params = new URLSearchParams(location.search);
-    const backTo = params.get("id");
-    if (backTo && MEMBERS.some(m => m.id === Number(backTo))) {
-        showProfileScreen(Number(backTo));
-    } else {
-        showHomeScreen();
+    if (currentStudentId) {
+        const members = await loadMembersByStudentId(currentStudentId);
+        if (members && members.length > 0) {
+            MEMBERS = members;
+            const params = new URLSearchParams(location.search);
+            const backTo = params.get("id");
+            if (backTo && MEMBERS.some(m => m.id === Number(backTo))) {
+                showProfileScreen(Number(backTo));
+            } else {
+                showHomeScreen();
+            }
+            return;
+        }
     }
+    showStudentIdScreen();
 }
 
 
@@ -487,3 +475,97 @@ window.addEventListener("pageshow", async () => {
         renderUserList();
     }
 });
+
+initApp();
+
+
+
+async function handleStudentIdSubmit(event) {
+    event.preventDefault();
+    const inputEl = document.getElementById("student-id-input");
+    const studentId = inputEl ? inputEl.value.trim() : "";
+
+    if (!studentId) {
+        showIdError("กรุณากรอกรหัสนักศึกษา");
+        return;
+    }
+
+    const members = await loadMembersByStudentId(studentId);
+
+    if (members && members.length > 0) {
+        currentStudentId = studentId;
+        localStorage.setItem("fund-dashboard-student-id", studentId);
+        MEMBERS = members;
+
+        const matchedMember = MEMBERS.find(m => m.studentId === studentId || m.id === Number(studentId));
+
+        if (matchedMember) {
+            showProfileScreen(matchedMember.id);
+        } else {
+            showHomeScreen();
+        }
+    } else {
+        showIdError("ไม่พบข้อมูลรหัสนักศึกษาในระบบ");
+    }
+}
+
+async function loadMembersByStudentId(studentId) {
+    try {
+        const response = await fetch(`/api/members?studentId=${encodeURIComponent(studentId)}`, { cache: "no-store" });
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) return data;
+        }
+    } catch (e) {
+        console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", e);
+    }
+
+    if (typeof MEMBERS !== "undefined" && MEMBERS.length > 0) {
+        return MEMBERS;
+    }
+    return [];
+}
+
+function showIdError(msg) {
+    const errorEl = document.getElementById("id-error-msg");
+    if (errorEl) {
+        errorEl.textContent = msg;
+        errorEl.classList.remove("hidden");
+    }
+}
+
+function logoutStudentId() {
+    localStorage.removeItem("fund-dashboard-student-id");
+    currentStudentId = null;
+    showStudentIdScreen();
+}
+
+function showStudentIdScreen() {
+    selectedId = null;
+    document.getElementById("student-id-screen")?.classList.remove("hidden");
+    document.getElementById("home-screen")?.classList.add("hidden");
+    document.getElementById("profile-screen")?.classList.add("hidden");
+}
+
+function showHomeScreen() {
+    selectedId = null;
+    document.getElementById("student-id-screen")?.classList.add("hidden");
+    document.getElementById("home-screen")?.classList.remove("hidden");
+    document.getElementById("profile-screen")?.classList.add("hidden");
+
+    const userBarInfo = document.getElementById("current-user-info");
+    if (userBarInfo && currentStudentId) {
+        userBarInfo.textContent = `รหัส: ${currentStudentId}`;
+    }
+
+    renderHomeSummary();
+    renderUserList();
+}
+
+function showProfileScreen(id) {
+    selectedId = id;
+    document.getElementById("student-id-screen")?.classList.add("hidden");
+    document.getElementById("home-screen")?.classList.add("hidden");
+    document.getElementById("profile-screen")?.classList.remove("hidden");
+    renderProfile();
+}
