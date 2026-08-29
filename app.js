@@ -66,15 +66,21 @@ function rowToMember(row) {
 
 app.get('/api/members', async (req, res) => {
     try {
-       const { branch } = req.query;
+        const { branch, studentId } = req.query;
 
-        if (!branch) {
-            return res.json([]);
+        if (studentId) {
+            const [rows] = await pool.query("SELECT * FROM members WHERE student_id = ?", [studentId]);
+            const members = rows.map(rowToMember);
+            return res.json(members);
         }
 
-        const [rows] = await pool.query("SELECT * FROM members WHERE branch = ?", [branch]);
-        const members = rows.map(rowToMember);
-        res.json(members);
+        if (branch) {
+            const [rows] = await pool.query("SELECT * FROM members WHERE branch = ?", [branch]);
+            const members = rows.map(rowToMember);
+            return res.json(members);
+        }
+
+        res.json([]);
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
     }

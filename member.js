@@ -570,30 +570,34 @@ function showProfileScreen(id) {
     renderProfile();
 }
 
+// สลับแท็บ Login / Register
 function switchTab(tab) {
     const loginForm = document.getElementById('login-form');
     const regForm = document.getElementById('register-form');
     const loginBtn = document.getElementById('tab-login-btn');
     const regBtn = document.getElementById('tab-register-btn');
 
+    if (!loginForm || !regForm) return;
+
     if (tab === 'login') {
         loginForm.style.display = 'block';
         regForm.style.display = 'none';
-        loginBtn.style.background = '#5c4eb40';
+        loginBtn.style.background = '#5b4a8f';
         loginBtn.style.color = 'white';
-        regBtn.style.background = '#eee';
-        regBtn.style.color = '#333';
+        regBtn.style.background = '#faf7f2';
+        regBtn.style.color = '#241f2e';
     } else {
         loginForm.style.display = 'none';
         regForm.style.display = 'block';
         regBtn.style.background = '#28a745';
         regBtn.style.color = 'white';
-        loginBtn.style.background = '#eee';
-        loginBtn.style.color = '#333';
+        loginBtn.style.background = '#faf7f2';
+        loginBtn.style.color = '#241f2e';
     }
 }
 
-async function headleRegister(e) {
+// ฟังก์ชันลงทะเบียนสมาชิกใหม่
+async function handleRegister(e) {
     e.preventDefault();
     const studentId = document.getElementById('reg-student-id').value;
     const name = document.getElementById('reg-name').value;
@@ -608,9 +612,10 @@ async function headleRegister(e) {
         const data = await res.json();
 
         if (data.success) {
-            alert('ลงทะเบียนสำเร็จแล้ว! ระบบจะนำคุณเข้าสู่ระบบ');
+            alert('ลงทะเบียนสำเร็จแล้ว! สามารถเข้าสู่ระบบได้ทันที');
             switchTab('login');
-            document.getElementById('login-student-id').value = studentId;
+            const loginInput = document.getElementById('student-id-input');
+            if (loginInput) loginInput.value = studentId;
         } else {
             alert('เกิดข้อผิดพลาด: ' + data.message);
         }
