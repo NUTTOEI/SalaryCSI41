@@ -63,16 +63,30 @@ if (!Array.isArray(MEMBERS)) {
     MEMBERS = [];
 }
 
-    const member = MEMBERS.find(m => 
-        String(m.id) === String(memberId) ||
-        String(m.student_id || m.studentId) === String(memberId)
+    const member = MEMBERS.find(m => {
+    if (!m) return false;
+    const targetId = String(memberId).trim();
+    return (
+        String(m.id || "").trim() === targetId ||
+        String(m._id || "").trim() === targetId ||
+        String(m.student_id || "").trim() === targetId ||
+        String(m.studentId || "").trim() === targetId ||
+        String(m.member_id || "").trim() === targetId
     );
+});
 
-    if (!member) {
-        alert("ไม่พบข้อมูลสมาชิก กรุณาเลือกใหม่อีกครั้ง");
-        location.href = "admin.html";
-        return;
+if (!member) {
+    console.error("❌ ไม่พบสมาชิก ID:", memberId, "จากรายการทั้งหมด:", MEMBERS);
+    alert(`ไม่พบข้อมูลสมาชิก (ID: ${memberId}) กรุณาตรวจสอบอีกครั้ง`);
+    
+    // หากมีหน้าก่อนหน้าให้ย้อนกลับ ถ้าไม่มีให้ไปหน้าหลัก (member.html หรือ index.html)
+    if (window.history.length > 1) {
+        history.back();
+    } else {
+        location.href = "index.html"; 
     }
+    return;
+}
 
     const rate = Number(member.amount)
         || (typeof ROOM !== 'undefined' && Number(ROOM.amount || ROOM.rate))
