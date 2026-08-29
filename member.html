@@ -3,9 +3,10 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <metaname="description"content="Comsci41">
-<meta name="robots" content="index, follow">
-<meta name="google-site-verification" content="member.html">
+        <!-- แก้ไขเว้นวรรค meta tag -->
+        <meta name="description" content="Comsci41">
+        <meta name="robots" content="index, follow">
+        <meta name="google-site-verification" content="member.html">
         <title>เงินรุ่น Comsci41</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
@@ -17,14 +18,11 @@
             <div class="brand">
                 <div class="eyebrow">ระบบเก็บเงินสาขา</div>
                 <div class="title" id="room-title">เงินรวมสาขา</div>
-                <!-- <a href="admin.html" class="admin-link">สำหรับผู้ดูแล →</a> -->
             </div>
 
             <div id="home-screen">
-
                 <!-- สรุปยอดเงินแบบใหม่ (วงกลมใหญ่) -->
                 <div class="jar-card summary-card-new">
-                    <!-- วงกลมแสดงเปอร์เซ็นต์และยอดเงิน -->
                     <div class="circle-chart-wrap">
                         <svg class="progress-ring" width="120" height="120" viewBox="0 0 120 120">
                             <circle class="progress-ring-bg" cx="60" cy="60" r="52" stroke="#EFEAF9" stroke-width="10" fill="none" />
@@ -35,7 +33,6 @@
                         </div>
                     </div>
 
-                    <!-- รายละเอียดข้อมูลสรุปยอดเงิน -->
                     <div class="jar-info">
                         <div class="jar-pct-main" id="jar-pct">0%</div>
                         <div class="jar-amount">เก็บได้ <b id="jar-collected">฿0</b> จากเป้า <b id="jar-target">฿0</b></div>
@@ -49,7 +46,6 @@
                 </div>
 
                 <div class="list-label" id="list-label">รายชื่อสมาชิกทั้งหมด</div>
-
                 <div id="user-list" class="user-list"></div>
             </div>
 
@@ -71,7 +67,10 @@
                     <div class="status-note hidden" id="status-note"></div>
                 </div>
 
-                <div class="history-card">
+                <!-- เพิ่ม container ตารางงวดชำระเงินที่ขาดหายไป -->
+                <div id="member-due-grid"></div>
+
+                <div class="history-card" style="margin-top: 16px;">
                     <div class="history-head">
                         <span>ประวัติการชำระเงิน</span>
                         <span class="total" id="history-total">฿0 สะสม</span>
@@ -112,6 +111,12 @@
                             </svg>
                         </div>
                     </div>
+                </div>
+
+                <!-- เพิ่มชื่อผู้ใช้และสาขาใน Slide Menu -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="menuUserName" style="font-weight: 600; font-size: 16px;">สมาชิก</div>
+                    <div id="menuUserBranch" style="font-size: 13px; color: var(--ink-soft);">สาขา: -</div>
                 </div>
 
                 <div class="menu-btn-group">

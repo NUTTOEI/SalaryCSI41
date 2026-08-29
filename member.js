@@ -572,7 +572,7 @@ function logoutMember() {
         const input = document.getElementById("memberStudentId");
         if (input) input.value = "";
 
-        const modal  = document.getElementById("loginModal");
+        const modal = document.getElementById("loginModal");
         if (modal) modal.style.display = "flex";
     }
 }
