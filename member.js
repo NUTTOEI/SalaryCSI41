@@ -569,3 +569,52 @@ function showProfileScreen(id) {
     document.getElementById("profile-screen")?.classList.remove("hidden");
     renderProfile();
 }
+
+function switchTab(tab) {
+    const loginForm = document.getElementById('login-form');
+    const regForm = document.getElementById('register-form');
+    const loginBtn = document.getElementById('tab-login-btn');
+    const regBtn = document.getElementById('tab-register-btn');
+
+    if (tab === 'login') {
+        loginForm.style.display = 'block';
+        regForm.style.display = 'none';
+        loginBtn.style.background = '#5c4eb40';
+        loginBtn.style.color = 'white';
+        regBtn.style.background = '#eee';
+        regBtn.style.color = '#333';
+    } else {
+        loginForm.style.display = 'none';
+        regForm.style.display = 'block';
+        regBtn.style.background = '#28a745';
+        regBtn.style.color = 'white';
+        loginBtn.style.background = '#eee';
+        loginBtn.style.color = '#333';
+    }
+}
+
+async function headleRegister(e) {
+    e.preventDefault();
+    const studentId = document.getElementById('reg-student-id').value;
+    const name = document.getElementById('reg-name').value;
+    const branch = document.getElementById('reg-branch').value;
+
+    try {
+        const res = await fetch('/api/member/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentId, name, branch })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            alert('ลงทะเบียนสำเร็จแล้ว! ระบบจะนำคุณเข้าสู่ระบบ');
+            switchTab('login');
+            document.getElementById('login-student-id').value = studentId;
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.message);
+        }
+    } catch (err) {
+        alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    }
+}

@@ -598,3 +598,86 @@ app.post('/api/admin/login', async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 });
+
+/* ------------------------------------------------------------------ */
+/* API: สำหรับสมาชิกลงทะเบียน และ เข้าสู่ระบบ                             */
+/* ------------------------------------------------------------------ */
+
+app.post('/api/member/register', async (req, res) => {
+    try {
+        const { studentId, name, branch } = req.body;
+
+        if (!studentId || !String(studentId).trim()) {
+            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' });
+        }
+        if (!name || !String(name).trim()) {
+            return res.status(400).json({ success: false, message: 'กรุณากรอกชื่อ-นามสกุล' });
+        }
+        if (!branch || !String(branch).trim()) {
+            return res.status(400).json({ success: false, message: 'กรุณากรอกสาขา / หรือตัวย่อสาขา (เช่น BWBS)' });
+        }
+
+        const cleanStudentId = String(studentId).trim();
+        const cleanName = String(name).trim();
+        const cleanBranch = String(branch).trim().toUpperCase();
+
+        const [existing] = await pool.query("SELECT id FROM members WHERE student_id = ?", [cleanStudentId]);
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้ถูกลงทะเบียนไว้แล้ว' });
+        }
+
+        const defaultAmount = 100;
+        await pool.query(
+            `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                cleanStudentId,
+                cleanBranch,
+                cleanName,
+                defaultAmount,
+                JSON.stringify(DEFAULT_MONTHS()),
+                JSON.stringify(DEFAULT_WEEKS()),
+                JSON.stringify([])
+            ]
+        );
+
+        res.json({
+            success: true,
+            message: 'ลงทะเบียนสำเร็จ สามารถเข้าสู่ระบบได้ทันที',
+            member: { studentId: cleanStudentId, name: cleanName, branch: cleanBranch }
+        });
+    } catch (err) {
+        console.error('Register Member Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/member/login', async (req, res) => {
+    try {
+        const { studentId } = req.body;
+        if (!studentId || !studentId.trim()) {
+            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' });
+        }
+
+        const [rows] = await pool.query(
+            "SELECT id, student_id, branch, name FROM members WHERE student_id = ?",
+            [studentId.trim()]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ กรุณาลงทะเบียนก่อน!!!!' });
+        }
+
+        const member = rows[0];
+        res.json({
+            success: true,
+            id: member.id,
+            studentId: member.student_id,
+            branch: member.branch,
+            name: member.name
+        });
+    } catch (err) {
+        console.error('Member Login Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
