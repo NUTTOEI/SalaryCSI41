@@ -94,37 +94,36 @@
             <i class="ti ti-menu-2"</i>
         </button>
 
-        <div id="slideMenuOverlay" class="slide-menu-overlay" onclick="toggleSlieMenu()"></div>
+        <div id="slideMenuOverlay" class="slide-menu-overlay" onclick="toggleSlideMenu()"></div>
         <div id="slideMenu" class="slide-menu">
             <div class="slide-menu-header">
-                <h3>เมนูสมาชิก</h3>
-                <button class="close-btn" onclick="toggleSlideMenu()">
-                    <i class="ti ti-x"></i>
-                </button>
+                <h2>MENU</h2>
             </div>
 
             <div class="slide-menu-body">
-                <div class="user-info-box">
-                    <i class="ti ti-user-circle"></i>
-                    </div>
-                        <div class="user-name" id="menuUserName">สมาชิก</div>
-                        <div class="user-branch" id="menuUserBranch">สาขา -</div>
+                <div class="profile-avatar-container">
+                    <div class="avatar-outer-ring">
+                        <div class="avatar-inner-ring">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" strike-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
                     </div>
                 </div>
 
-                <ul class="menu-list">
-                    <li>
-                        <a href="#" onclick="showHomeScreen(); toggleSlideMenu();">
-                            <i class="ti ti-home"></i> หน้าหลัก
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="slide-menu-footer">
-                <button class="login-btn" onclick="logoutMember()">
-                    <i class="ti ti-logout"></i> ออกจากระบบ
-                </button>
+                <div class="menu-btn-group">
+                    <button class="btn-menu-action btn-profile" onclick="toggleSildeMenu()">
+                        ตั้งค่าโปรไฟล์
+                    </button>
+                    <button class="btn-menu-action btn-logout" onclick="logoutMember()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        <span>ออกจากระบบ</span>
+                    </button>
+                </div>
             </div>
         </div>
 
