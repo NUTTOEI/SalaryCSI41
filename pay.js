@@ -24,20 +24,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     const memberId = Number(params.get("id"));
 
     // โหลดข้อมูลสมาชิกจาก MySQL API
-    let MEMBERS = [];
+let MEMBERS = [];
+try {
+    const response = await fetch("/api/members", { cache: "no-store" });
+    if (response.ok) {
+        const data = await response.json();
+        // เช็กโครงสร้าง JSON เพื่อดึง Array ออกมาให้ถูกต้อง
+        if (Array.isArray(data)) {
+            MEMBERS = data;
+        } else if (data && Array.isArray(data.data)) {
+            MEMBERS = data.data;
+        } else if (data && Array.isArray(data.members)) {
+            MEMBERS = data.members;
+        }
+    }
+} catch (e) {
+    console.error("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:", e);
+}
+
+// หากดึงจาก API ไม่สำเร็จ ให้ดึงจาก LocalStorage หรือ getMembersData()
+if (!Array.isArray(MEMBERS) || MEMBERS.length === 0) {
     try {
-        const response = await fetch("/api/members", { cache: "no-store" });
-        if (response.ok) {
-            MEMBERS = await response.json();
+        const storedMembers = localStorage.getItem("fund-dashboard-members");
+        const parsed = storedMembers ? JSON.parse(storedMembers) : null;
+        if (Array.isArray(parsed)) {
+            MEMBERS = parsed;
+        } else if (typeof getMembersData === 'function') {
+            const fallback = getMembersData();
+            MEMBERS = Array.isArray(fallback) ? fallback : [];
         }
     } catch (e) {
-        console.error("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:", e);
+        MEMBERS = [];
     }
-    
-    if (MEMBERS.length === 0) {
-        const storedMembers = localStorage.getItem("fund-dashboard-members");
-        MEMBERS = storedMembers ? JSON.parse(storedMembers) : (typeof getMembersData === 'function' ? getMembersData() : []);
-    }
+}
+
+// ป้องกัน Error 100% โดยการรับประกันว่า MEMBERS เป็น Array เสมอ
+if (!Array.isArray(MEMBERS)) {
+    MEMBERS = [];
+}
 
     const member = MEMBERS.find(m => 
         String(m.id) === String(memberId) ||
