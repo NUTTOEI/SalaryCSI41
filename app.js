@@ -627,6 +627,15 @@ app.post('/api/member/register', async (req, res) => {
         const cleanName = String(name).trim();
         const cleanBranch = String(branch).trim().toUpperCase();
 
+        // 🟢 [แก้ไขจุดนี้] ตรวจสอบว่ามีสาขาในตาราง branches หรือยัง หากยังไม่มีให้สร้างให้อัตโนมัติ
+        const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
+        if (existingBranch.length === 0) {
+            await pool.query(
+                "INSERT INTO branches (branch_code, branch_name, profile_img) VALUES (?, ?, ?)",
+                [cleanBranch, cleanBranch, `${cleanBranch}.png`]
+            );
+        }
+
         const [existing] = await pool.query("SELECT id FROM members WHERE student_id = ?", [cleanStudentId]);
         if (existing.length > 0) {
             return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้ถูกลงทะเบียนไว้แล้ว' });
