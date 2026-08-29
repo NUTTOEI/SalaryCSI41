@@ -439,8 +439,6 @@ function getMemberStatus(m) {
     }
 }
 
-initApp();
-
 window.addEventListener("storage", async (e) => {
    if (e.key === "fund-dashboard-member") {
         if (e.newValue) MEMBERS = JSON.parse(e.newValue);

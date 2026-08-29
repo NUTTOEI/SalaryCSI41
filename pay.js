@@ -416,7 +416,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         MEMBERS = storedMembers ? JSON.parse(storedMembers) : (typeof getMembersData === 'function' ? getMembersData() : []);
     }
 
-    const member = MEMBERS.find(m => m.id === memberId);
+    const member = MEMBERS.find(m => 
+        String(m.id) === String(memberId) ||
+        String(m.student_id || m.studentId) === String(memberId)
+    );
 
     if (!member) {
         alert("ไม่พบข้อมูลสมาชิก กรุณาเลือกใหม่อีกครั้ง");
@@ -436,6 +439,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderMonthModeUI();
     } else {
         renderWeekModeUI();
+    }
+
+    const indexParam = params.get("index");
+    const typeParam = params.get("type") || COLLECTION_MODE;
+
+    if (indexParam !== null) {
+        const targetIdx = Number(indexParam);
+        if (typeParam === "month") {
+            selectedMonths = [targetIdx];
+            const totalAmount = selectedMonths.length * rate;
+            updatePayAmountUI(totalAmount, true);
+            renderMonthModeUI();
+        } else {
+            selectedWeeks = [targetIdx];
+            const totalAmount = selectedWeeks.length * rate;
+            updatePayAmountUI(totalAmount, true);
+            renderWeekGrid();
+        }
     }
     
     function renderMonthModeUI() {
