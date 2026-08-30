@@ -12,6 +12,23 @@ const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const avatarStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'fund_avatars',
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+        transformation: [{ width: 500, height: 500, crop: 'limit' }]
+    },
+});
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -122,7 +139,7 @@ app.put('/api/members/:id', async (req, res) => {
 
 app.post('/api/admin/members', async (req, res) => {
     try {
-        const {studentId, name, amount, branch } = req.body;
+        const { studentId, name, amount, branch } = req.body;
 
         if (!studentId || !String(studentId).trim()) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุรหัสนักศึกษา' });
@@ -132,20 +149,19 @@ app.post('/api/admin/members', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุชื่อ' });
         }
 
-        // 🟢 [แก้ไข] ต้องระบุ branch เสมอ ห้ามใส่ค่า Default เป็น 'comsci41'
-        if (!branch) {
+        if (!branch || !String(branch).trim()) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา (branch)' });
         }
 
         const rate = Number(amount) || 100;
-        const memberBranch = branch || 'comsci41';
+        const cleanBranch = String(branch).trim().toUpperCase();
 
         const [result] = await pool.query(
             `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 String(studentId).trim(),
-                memberBranch, 
+                cleanBranch, 
                 String(name).trim(), 
                 rate, 
                 JSON.stringify(DEFAULT_MONTHS()), 
@@ -298,7 +314,6 @@ app.put('/api/admin/members/amount-all', async (req, res) => {
     }
 });
 
-
 /* ------------------------------------------------------------------ */
 /* ระบบตรวจสลิปโอนเงิน + แจ้งเตือน LINE                                */
 /* ------------------------------------------------------------------ */
@@ -418,30 +433,13 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* API: รูปโปรไฟล์สาขา                                                 */
+/* API: รูปโปรไฟล์สาขา และ รูปโปรไฟล์สมาชิก                              */
 /* ------------------------------------------------------------------ */
-const branchStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `avatar-${uniqueSuffix}${ext}`);
-    }
-});
 
 
-const uploadBranchAvatar = multer({
-    storage: branchStorage,
-    limits: { fileSize: 2 * 1024 * 1024 }, // ไม่เกิน 2MB
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น'));
-        }
-    }
+const uploadAvatar = multer({
+   storage: avatarStorage,
+   limits: { fileSize: 2 * 1024 * 1024 }
 });
 
 app.get('/api/branch/profile', async (req, res) => {
@@ -462,7 +460,7 @@ app.get('/api/branch/profile', async (req, res) => {
     }
 });
 
-app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar'), async (req, res) => {
+app.post('/api/admin/branch/upload-profile', uploadAvatar.single('avatar'), async (req, res) => {
     try {
         const branch = req.body.branch;
 
@@ -474,7 +472,7 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
             return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
 
-        const avatarUrl = `/uploads/${req.file.filename}`;
+        const avatarUrl = req.file.path;
 
         await pool.query(
             "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
@@ -492,49 +490,35 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
     }
 });
 
-/* ------------------------------------------------------------------ */
-/* หน้าแรก + Webhook + start server                                    */
-/* ------------------------------------------------------------------ */
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'member.html'));
-});
-
-app.post('/webhook', (req, res) => {
-    const events = req.body.events || [];
-    events.forEach(event => {
-        if (event.source && event.source.userId) {
-            console.log('====================================');
-            console.log('User ID ของคนที่ทักมา:', event.source.userId);
-            console.log('====================================');
+app.post('/api/member/upload-profile', uploadAvatar.single('avatar'), async (req, res) => {
+    try {
+        const { memberId } = req.body;
+        if (!memberId) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุ ID สมาชิก' });
         }
-    });
-    res.sendStatus(200);
-});
-
-app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
-        return res.status(400).json({ success: false, message: err.message });
-    } else if (err) {
-        return res.status(400).json({ success: false, message: err.message });
+
+        const avatarUrl = req.file.path;
+
+        await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
+
+        res.json({
+            success: true,
+            message: 'อัปเดทรูปโปรไฟล์สำเร็จ',
+            profileImg: avatarUrl
+        });
+    } catch (error) {
+        console.error('Member Avatar Upload Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
     }
-    next();
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    await testConnection();
-});
-
 
 /* ------------------------------------------------------------------ */
 /* API: สมัครสมาชิก และ เข้าสู่ระบบแอดมิน                                 */
 /* ------------------------------------------------------------------ */
 
-// 1. API ลงทะเบียนแอดมินใหม่ (เก็บเข้า MySQL)
 app.post('/api/admin/register', async (req, res) => {
     try {
         const { studentId, name, branch } = req.body;
@@ -544,7 +528,6 @@ app.post('/api/admin/register', async (req, res) => {
 
         const cleanBranch = branch.trim();
 
-        // 🟢 [เพิ่มจุดนี้] ตรวจสอบก่อนว่ามีสาขานี้ในตาราง branches หรือยัง ถ้ายังไม่มีให้เพิ่มอัตโนมัติ
         const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
         if (existingBranch.length === 0) {
             await pool.query(
@@ -555,7 +538,7 @@ app.post('/api/admin/register', async (req, res) => {
 
         await pool.query(
             "INSERT INTO admins (student_id, name, branch) VALUES (?, ?, ?)",
-            [studentId.trim(), name.trim(), branch.trim()]
+            [studentId.trim(), name.trim(), cleanBranch]
         );
 
         res.json({ success: true, message: 'ลงทะเบียนแอดมินสำเร็จ' });
@@ -568,7 +551,6 @@ app.post('/api/admin/register', async (req, res) => {
     }
 });
 
-// 2. API ตรวจสอบรหัสนักศึกษาเพื่อเข้าสู่ระบบ
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { studentId } = req.body;
@@ -617,7 +599,6 @@ app.post('/api/member/register', async (req, res) => {
         const cleanName = String(name).trim();
         const cleanBranch = String(branch).trim().toUpperCase();
 
-        // 🟢 [แก้ไขจุดนี้] ตรวจสอบว่ามีสาขาในตาราง branches หรือยัง หากยังไม่มีให้สร้างให้อัตโนมัติ
         const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
         if (existingBranch.length === 0) {
             await pool.query(
@@ -687,27 +668,40 @@ app.post('/api/member/login', async (req, res) => {
     }
 });
 
-app.post('/api/member/upload-profile', uploadBranchAvatar.single('avatar'), async (req, res) => {
-    try {
-        const { memberId } = req.body;
-        if (!memberId) {
-            return res.status(400).json({ success: false, message: 'กรุณาระบุ ID สมาชิก' });
+/* ------------------------------------------------------------------ */
+/* หน้าแรก + Webhook + Error Handling + Start Server                  */
+/* ------------------------------------------------------------------ */
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'member.html'));
+});
+
+app.post('/webhook', (req, res) => {
+    const events = req.body.events || [];
+    events.forEach(event => {
+        if (event.source && event.source.userId) {
+            console.log('====================================');
+            console.log('User ID ของคนที่ทักมา:', event.source.userId);
+            console.log('====================================');
         }
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
+    });
+    res.sendStatus(200);
+});
+
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
         }
-
-        const avatarUrl = `/uploads/${req.file.filename}`;
-
-        await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
-
-        res.json({
-            success: true,
-            message: 'อัปเดทรูปโปรไฟล์สำเร็จ',
-            profileImg: avatarUrl
-        });
-    } catch (error) {
-        console.error('Member Avatar Upload Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
+        return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+        return res.status(400).json({ success: false, message: err.message });
     }
-})
+    next();
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    await testConnection();
+});
