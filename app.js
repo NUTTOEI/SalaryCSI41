@@ -142,7 +142,7 @@ app.post('/api/admin/members', async (req, res) => {
 
         const [result] = await pool.query(
             `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 String(studentId).trim(),
                 memberBranch, 
@@ -295,33 +295,6 @@ app.put('/api/admin/members/amount-all', async (req, res) => {
     } catch (err) {
         console.error('PUT /api/admin/members/amount-all error:', err);
         res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
-app.post('/api/member/login', async (req, res) => {
-    try {
-        const { studentId } = req.body;
-        if (!studentId || !studentId.trim()) {
-            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' })
-        }
-
-        const [rows] = await pool.query(
-            "SELECT id, student_id, branch, name FROM members WHERE student_id = ?",
-            [studentId.trim()]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ' });
-        }
-
-        res.json({
-            success: true,
-            branch: rows[0].branch,
-            name: rows[0].name
-        });
-    } catch (err) { 
-        console.error('Member Login Error:', err);
-        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -712,7 +685,7 @@ app.post('/api/member/upload-profile', uploadBranchAvatar.single('avatar'), asyn
             return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
 
-        const avatarUrl = `/api/upload${req.file.filename}`;
+        const avatarUrl = `/uploads/${req.file.filename}`;
 
         await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
 
