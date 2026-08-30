@@ -26,9 +26,9 @@ function getValidProfileUrl(m) {
         return null;
     }
     
-    if (raw.includes('?t=')) return raw;
-    const separator = raw.includes('?') ? '&' : '?';
-    return `${raw}${separator}t=${Date.now()}`;
+    
+    const baseUrl = raw.split('?')[0];
+    return `${baseUrl}?t=${Date.now()}`;
 }
 
 function getActiveMonthIndex() {
@@ -713,21 +713,21 @@ async function handleProfileUpload(event) {
 
         if (data.success) {
             const newUrl = data.profileImg || data.profile_img || data.avatarUrl;
-            if (newUrl) {
-                const separator = newUrl.includes('?') ? '&' : '?';
-                const updatedUrl = `${newUrl}${separator}t=${Date.now()}`;
-
+            
+            // อัปเดตข้อมูลล่าสุดจาก Server เข้าตัวแปรหลักก่อน
+            const latest = await loadLatestMembers();
+            if (latest && latest.length > 0) {
+                MEMBERS = latest;
+            } else if (newUrl) {
                 const m = MEMBERS.find(x => Number(x.id) === Number(selectedId));
                 if (m) {
-                    m.profile_img = updatedUrl;
-                    m.profileImg = updatedUrl;
+                    m.profile_img = newUrl;
+                    m.profileImg = newUrl;
                 }
             }
 
+            // แสดงผลหน้าจอใหม่หลังจากได้ข้อมูลเรียบร้อยแล้ว
             renderProfile();
-
-            const latest = await loadLatestMembers();
-            if (latest && latest.length > 0) MEMBERS = latest;
 
             Swal.fire({
                 icon: 'success',

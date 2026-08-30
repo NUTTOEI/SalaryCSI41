@@ -12,9 +12,9 @@ function getValidProfileUrl(m) {
         return null;
     }
     
-    if (raw.includes('?t=')) return raw;
-    const separator = raw.includes('?') ? '&' : '?';
-    return `${raw}${separator}t=${Date.now()}`;
+   
+    const baseUrl = raw.split('?')[0];
+    return `${baseUrl}?t=${Date.now()}`;
 }
 
 function getActiveMonthIndex() {
