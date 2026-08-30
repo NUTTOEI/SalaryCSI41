@@ -22,11 +22,13 @@ function getValidProfileUrl(m) {
     if (!raw) return null;
     
     const clean = String(raw).trim().toLowerCase();
-    if (clean === "" || clean === "undefined" || clean === "null" || clean.endsWith("/undefined")) {
+    if (clean === "" || clean.includes("undefined") || clean.includes("null")) {
         return null;
     }
     
-    return raw.includes('?') ? raw : `${raw}?t=${Date.now()}`;
+    if (raw.includes('?t=')) return raw;
+    const separator = raw.includes('?') ? '&' : '?';
+    return `${raw}${separator}t=${Date.now()}`;
 }
 
 function getActiveMonthIndex() {
@@ -686,7 +688,7 @@ function triggerUploadProfile() {
     if (fileInput) fileInput.click();
 }
 
-async function handleProfileUpload(event) {
+aasync function handleProfileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -710,12 +712,16 @@ async function handleProfileUpload(event) {
         const data = await res.json();
 
         if (data.success) {
-            const m = MEMBERS.find(x => Number(x.id) === Number(selectedId));
-            if (m) {
-                // ✅ อัปเดตทั้งโปรพอร์ตี้ profile_img และ profileImg เพื่อให้ getValidProfileUrl แสดงผลรูปใหม่ทันที
-                const updatedUrl = `${data.profileImg}?t=${Date.now()}`;
-                m.profile_img = updatedUrl;
-                m.profileImg = updatedUrl;
+            const newUrl = data.profileImg || data.profile_img || data.avatarUrl;
+            if (newUrl) {
+                const separator = newUrl.includes('?') ? '&' : '?';
+                const updatedUrl = `${newUrl}${separator}t=${Date.now()}`;
+
+                const m = MEMBERS.find(x => Number(x.id) === Number(selectedId));
+                if (m) {
+                    m.profile_img = updatedUrl;
+                    m.profileImg = updatedUrl;
+                }
             }
 
             renderProfile();

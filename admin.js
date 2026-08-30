@@ -8,11 +8,13 @@ function getValidProfileUrl(m) {
     
     const clean = String(raw).trim().toLowerCase();
     // คัดกรองค่าว่าง หรือคำว่า "undefined" / "null" ออกทั้งหมด
-    if (clean === "" || clean === "undefined" || clean === "null" || clean.endsWith("/undefined")) {
+    if (clean === "" || clean.includes("undefined") || clean.includes("null")) {
         return null;
     }
     
-    return raw.includes('?') ? raw : `${raw}?t=${Date.now()}`;
+    if (raw.includes('?t=')) return raw;
+    const separator = raw.includes('?') ? '&' : '?';
+    return `${raw}${separator}t=${Date.now()}`;
 }
 
 function getActiveMonthIndex() {
@@ -745,7 +747,7 @@ async function processAdminRegister(e) {
                 if (document.getElementById("login-student-id")) {
                     document.getElementById("login-student-id").value = studentId;
                 }
-                toggleAuthView('login');
+                if (typeof toggleAuthView === "function") toggleAuthView('login');
             });
         } else {
             hideLoading();
@@ -811,10 +813,13 @@ async function loadBranchAvatar(branch) {
         const response = await fetch(`/api/branch/profile?branch=${branch}`);
         if (response.ok) {
             const data = await response.json();
-            if (data.avatarUrl) {
+            const rawUrl = data.avatarUrl;
+            if (rawUrl && !String(rawUrl).includes('undefined') && !String(rawUrl).includes('null')) {
                 const avatarImg = document.getElementById('branch-avatar-img');
                 const settingImg = document.getElementById('settings-avatar-preview');
-                const timestampedUrl = `${data.avatarUrl}?t=${Date.now()}`;
+                const separator = rawUrl.includes('?') ? '&' : '?';
+                const timestampedUrl = `${rawUrl}${separator}t=${Date.now()}`;
+                
                 if (avatarImg) avatarImg.src = timestampedUrl;
                 if (settingImg) settingImg.src = timestampedUrl;
             }
