@@ -7,13 +7,21 @@ let currentStudentId = localStorage.getItem("fund-dashboard-student-id") || null
 if (typeof MEMBERS === "undefined") var MEMBERS = [];
 if (typeof TARGET_AMOUNT === "undefined") var TARGET_AMOUNT = 0;
 
+// ✅ แปลงโครงสร้าง Array จาก String JSON หรือ Array ป้องกัน TypeError
+function parseArrayField(field, defaultLen = 12) {
+    if (Array.isArray(field)) return field;
+    if (typeof field === "string") {
+        try { return JSON.parse(field); } catch (e) { }
+    }
+    return Array(defaultLen).fill(false);
+}
+
 function getValidProfileUrl(m) {
     if (!m) return null;
     const raw = m.profile_img || m.profileImg;
     if (!raw) return null;
     
     const clean = String(raw).trim().toLowerCase();
-    // คัดกรองค่าว่าง หรือคำว่า "undefined" / "null" ออกทั้งหมด
     if (clean === "" || clean === "undefined" || clean === "null" || clean.endsWith("/undefined")) {
         return null;
     }
@@ -44,7 +52,6 @@ function statusLabel(m) {
     return `<span class="u-tag ${statusInfo.class}">${statusInfo.text}</span>`;
 }
 
-// เพิ่มฟังก์ชันคำนวณยอดเงินสะสมจริงจากงวดที่ชำระ
 function computeCollectedTotal(membersList) {
     const list = membersList || MEMBERS || [];
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
@@ -52,11 +59,12 @@ function computeCollectedTotal(membersList) {
     return list.reduce((sum, m) => {
         const rate = Number(m.amount) || 100;
         if (mode === "month") {
-            const paidCount = (m.paidMonths || []).filter(Boolean).length;
-            return sum + (paidCount * rate);
+            const paidMonths = parseArrayField(m.paidMonths, 12);
+            return sum + (paidMonths.filter(Boolean).length * rate);
         } else {
-            const paidCount = (m.paidWeeks || []).filter(Boolean).length;
-            return sum + (paidCount * rate);
+            const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
+            const paidWeeks = parseArrayField(m.paidWeeks, totalWeeks);
+            return sum + (paidWeeks.filter(Boolean).length * rate);
         }
     }, 0);
 }
@@ -72,13 +80,15 @@ function renderHomeSummary() {
 
     const paidCount = MEMBERS.filter(m => {
         if (collectionMode === "month") {
-            return m.paidMonths ? Boolean(m.paidMonths[activeMonthIndex]) : m.paid;
+            const paidMonths = parseArrayField(m.paidMonths, 12);
+            return Boolean(paidMonths[activeMonthIndex]);
         } else {
-            return m.paidWeeks ? Boolean(m.paidWeeks[activeWeekIndex]) : m.paid;
+            const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
+            const paidWeeks = parseArrayField(m.paidWeeks, totalWeeks);
+            return Boolean(paidWeeks[activeWeekIndex]);
         }
     }).length;
 
-    // คำนวณยอดเงินสะสมจริงตามงวดที่กดจ่าย
     const collected = computeCollectedTotal(MEMBERS);
 
     const targetAmt = TARGET_AMOUNT;
@@ -90,7 +100,6 @@ function renderHomeSummary() {
     if (document.getElementById("jar-sub")) document.getElementById("jar-sub").textContent = `จ่ายแล้ว ${paidCount} จาก ${totalMembers} คน`;
 
     const circleCenterMoney = document.getElementById("circle-center-money");
-    const circleSubText = document.getElementById("circle-sub-text");
     const circleProgress = document.getElementById("circle-progress");
 
     if (circleCenterMoney) circleCenterMoney.textContent = safeFmtMoney(collected);
@@ -100,7 +109,6 @@ function renderHomeSummary() {
         const offset = circumference - (pct / 100) * circumference;
         circleProgress.style.strokeDashoffset = offset;
     }
-
 }
 
 function renderUserList() {
@@ -132,14 +140,14 @@ function renderUserList() {
 
 function getNextUnpaidIndex(m, mode, activeMonth, activeWeek) {
     if (mode === "month") {
-        const paidMonths = m.paidMonths || Array(12).fill(false);
+        const paidMonths = parseArrayField(m.paidMonths, 12);
         for (let i = activeMonth; i < 12; i++) {
             if (!paidMonths[i]) return i;
         }
         return paidMonths.findIndex(isPaid => !isPaid);
     } else {
         const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
-        const paidWeeks = m.paidWeeks || Array(totalWeeks).fill(false);
+        const paidWeeks = parseArrayField(m.paidWeeks, totalWeeks);
         for (let i = activeWeek; i < totalWeeks; i++) {
             if (!paidWeeks[i]) return i;
         }
@@ -159,7 +167,6 @@ function renderProfile() {
     const tint = typeof tintFor === "function" ? tintFor(m.id) : { bg: "#eef0fb", fg: "#4c5fd5" };
     const avatar = document.getElementById("profile-avatar");
     if (avatar) {
-        // ✅ เปลี่ยนมาใช้ฟังก์ชัน getValidProfileUrl(m) ที่เตรียมไว้ด้านบน
         const imgUrl = getValidProfileUrl(m);
 
         if (imgUrl) {
@@ -175,7 +182,6 @@ function renderProfile() {
             avatar.style.color = tint.fg;
         }
     }
-    
 
     if (document.getElementById("profile-name")) document.getElementById("profile-name").textContent = m.name;
 
@@ -224,11 +230,12 @@ function renderProfile() {
 
     let totalPaid = 0;
     if (collectionMode === "month") {
-        const paidCount = (m.paidMonths || []).filter(Boolean).length;
-        totalPaid = paidCount * memberRate;
+        const paidMonths = parseArrayField(m.paidMonths, 12);
+        totalPaid = paidMonths.filter(Boolean).length * memberRate;
     } else {
-        const paidCount = (m.paidWeeks || []).filter(Boolean).length;
-        totalPaid = paidCount * memberRate;
+        const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
+        const paidWeeks = parseArrayField(m.paidWeeks, totalWeeks);
+        totalPaid = paidWeeks.filter(Boolean).length * memberRate;
     }
 
     if (document.getElementById("history-total")) document.getElementById("history-total").textContent = safeFmtMoney(totalPaid) + " สะสม";
@@ -275,7 +282,7 @@ function renderMemberDashboard(member) {
     let gridHTML = "";
 
     if (collectionMode === "month") {
-        const paidMonths = member.paidMonths || Array(12).fill(false);
+        const paidMonths = parseArrayField(member.paidMonths, 12);
         
         gridHTML = Array.from({ length: 12 }, (_, i) => {
             const monthName = typeof THAI_MONTHS !== "undefined" ? THAI_MONTHS[i] : `งวดที่ ${i + 1}`;
@@ -309,7 +316,7 @@ function renderMemberDashboard(member) {
         }).join("");
     } else {
         const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
-        const paidWeeks = member.paidWeeks || Array(totalWeeks).fill(false);
+        const paidWeeks = parseArrayField(member.paidWeeks, totalWeeks);
 
         gridHTML = Array.from({ length: totalWeeks }, (_, i) => {
             const isPaid = paidWeeks[i];
@@ -350,7 +357,6 @@ function goToPayPage(memberId, type, index) {
     window.location.href = `pay.html?id=${memberId}&type=${type}&index=${index}`;
 }
 
-
 document.addEventListener("click", (e) => {
     const item = e.target.closest("[data-select-id]");
     if (item) {
@@ -383,6 +389,7 @@ async function loadLatestMembers() {
     }
     return [];
 }
+
 async function loadTargetAmount() {
     try {
         const resTarget = await fetch("/api/settings/target", { cache: "no-store" });
@@ -419,13 +426,12 @@ async function initApp() {
     showStudentIdScreen();
 }
 
-
 function getMemberStatus(m) {
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
 
     if (mode === "month") {
         const currentMonth = typeof getActiveMonthIndex === "function" ? getActiveMonthIndex() : new Date().getMonth();
-        const paidMonths = m.paidMonths || Array(12).fill(false);
+        const paidMonths = parseArrayField(m.paidMonths, 12);
 
         if (paidMonths[currentMonth]) {
             return {
@@ -444,7 +450,8 @@ function getMemberStatus(m) {
         };
     } else {
         const activeWeek = typeof getActiveWeekIndex === "function" ? getActiveWeekIndex() : Number(localStorage.getItem("fund-dashboard-active-week")) || 0;
-        const paidWeeks = m.paidWeeks || [];
+        const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
+        const paidWeeks = parseArrayField(m.paidWeeks, totalWeeks);
         const paidCount = paidWeeks.filter(Boolean).length;
         const isCurrentPaid = Boolean(paidWeeks[activeWeek]);
 
@@ -502,8 +509,6 @@ window.addEventListener("pageshow", async () => {
 });
 
 initApp();
-
-
 
 async function handleStudentIdSubmit(event) {
     event.preventDefault();
@@ -591,7 +596,6 @@ function showProfileScreen(id) {
     renderProfile();
 }
 
-// สลับแท็บ Login / Register
 function switchTab(tab) {
     const loginForm = document.getElementById('login-form');
     const regForm = document.getElementById('register-form');
@@ -617,7 +621,6 @@ function switchTab(tab) {
     }
 }
 
-// ฟังก์ชันลงทะเบียนสมาชิกใหม่
 async function handleRegister(e) {
     e.preventDefault();
     const studentId = document.getElementById('reg-student-id').value;
@@ -658,7 +661,7 @@ async function handleRegister(e) {
             icon: 'error',
             title: 'การเชื่อมต่อล้มเหลว',
             text: 'ไม่สามารถเชื่อต่อเซิร์ฟเวอร์ได้',
-            conFirmButtonText: 'ตกลง'
+            confirmButtonText: 'ตกลง'
         });
     }
 }
@@ -678,7 +681,7 @@ document.addEventListener("click", function(event) {
     }
 });
 
-function  triggerUploadProfile() {
+function triggerUploadProfile() {
     const fileInput = document.getElementById('profile-file-input');
     if (fileInput) fileInput.click();
 }
@@ -709,7 +712,10 @@ async function handleProfileUpload(event) {
         if (data.success) {
             const m = MEMBERS.find(x => Number(x.id) === Number(selectedId));
             if (m) {
-                m.profileImg = `${data.profileImg}?t=${Date.now()}`;
+                // ✅ อัปเดตทั้งโปรพอร์ตี้ profile_img และ profileImg เพื่อให้ getValidProfileUrl แสดงผลรูปใหม่ทันที
+                const updatedUrl = `${data.profileImg}?t=${Date.now()}`;
+                m.profile_img = updatedUrl;
+                m.profileImg = updatedUrl;
             }
 
             renderProfile();

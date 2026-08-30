@@ -116,11 +116,13 @@ function computeStats() {
 }
 
 function sortedFilteredMembers() {
+    const q = state.query.trim().toLowerCase();
     let items = MEMBERS.filter(m => {
         const isPaid = isMemberPaidCurrent(m);
-        const q = m.name ? m.name.includes(state.query.trim()) : false;
+        // ✅ รองรับการค้นหาแบบ Case-insensitive
+        const isMatch = m.name ? m.name.toLowerCase().includes(q) : false;
         const f = state.filter === "all" ? true : state.filter === "paid" ? isPaid : !isPaid;
-        return q && f;
+        return isMatch && f;
     });
     if (state.sort === "name") {
         items = items.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
@@ -266,7 +268,6 @@ function renderRow(m, index) {
     const historyCount = m.history ? m.history.length : 0;
     const branchBadge = `<span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; margin-left:6px;">${m.branch || 'comsci41'}</span>`;
 
-    // ✅ เปลี่ยนมาใช้ฟังก์ชัน getValidProfileUrl(m) เพื่อกรอง "undefined" และ "null" ออกอย่างถูกต้อง
     const avatarUrl = getValidProfileUrl(m);
     
     const avatarContent = avatarUrl
@@ -668,7 +669,6 @@ function setupBranchTitle() {
     });
 }
 
-// เข้าสู่ระบบแอดมินผ่าน MySQL
 async function processAdminLogin() {
     const inputEl = document.getElementById("login-student-id");
     const studentId = inputEl ? inputEl.value.trim() : "";
@@ -708,7 +708,6 @@ async function processAdminLogin() {
     }
 }
 
-// ลงทะเบียนแอดมินใหม่เข้า MySQL
 async function processAdminRegister(e) {
     if (e) e.preventDefault();
     const studentId = document.getElementById("reg-student-id")?.value.trim();
@@ -720,7 +719,6 @@ async function processAdminRegister(e) {
         return;
     }
 
-    // 1. เรียกแสดงวงกลมหมุนรอโหลด
     showLoading("กำลังลงทะเบียน...");
 
     try {
@@ -736,7 +734,6 @@ async function processAdminRegister(e) {
             sessionStorage.setItem("admin_student_id", studentId);
             sessionStorage.setItem("admin_branch", branch);
 
-            // 2. แสดงติ๊กถูกสีเขียวสำเร็จ พร้อม Callback ปิด Modal หลังจบอนิเมชัน
             showSuccess("ลงทะเบียนสำเร็จ!", 1800, () => {
                 const loginModal = document.getElementById("login-modal");
                 const mainDashboard = document.getElementById("main-dashboard");
@@ -827,12 +824,10 @@ async function loadBranchAvatar(branch) {
     }
 }
 
-// Event Listeners สำหรับ UI Components
 document.addEventListener('DOMContentLoaded', () => {
     initAdminApp();
     initAdminAuth();
 
-    // Drawer Menu & Overlay
     const menuBtn = document.getElementById("menu-toggle-btn");
     const closeBtn = document.getElementById("close-drawer-btn");
     const drawer = document.getElementById("side-drawer");
@@ -852,7 +847,6 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn?.addEventListener("click", closeDrawer);
     overlay?.addEventListener("click", closeDrawer);
 
-    // Logout Modal
     const logoutBtn = document.getElementById("logout-btn");
     const logoutModal = document.getElementById("logout-confirm-modal");
     const cancelLogoutBtn = document.getElementById("cancel-logout-btn");
@@ -879,7 +873,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Settings Profile Image Upload Modal
     const openSettingBtn = document.getElementById('open-setting-btn');
     const closeSettingsBtn = document.getElementById('close-setting-btn');
     const settingsModal = document.getElementById('settings-modal');
@@ -958,7 +951,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// แสดงวงกลมหมุนรอโหลด
 function showLoading(message = "กำลังโหลดข้อมูล...") {
     const modal = document.getElementById("loading-modal");
     const spinnerBox = document.getElementById("loading-spinner-box");
@@ -973,7 +965,6 @@ function showLoading(message = "กำลังโหลดข้อมูล...
     modal.style.display = "flex";
 }
 
-// เปลี่ยนเป็นเครื่องหมายติ๊กถูกสำเร็จ
 function showSuccess(message = "สำเร็จ!", duration = 1400, callback = null) {
     const modal = document.getElementById("loading-modal");
     const spinnerBox = document.getElementById("loading-spinner-box");
@@ -1000,7 +991,6 @@ function showSuccess(message = "สำเร็จ!", duration = 1400, callback 
     }, duration);
 }
 
-// ปิด Modal โหลดกรณีเกิด Error
 function hideLoading() {
     const modal = document.getElementById("loading-modal");
     if (modal) modal.style.display = "none";
