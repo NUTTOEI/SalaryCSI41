@@ -146,6 +146,7 @@ function renderProfile() {
     const avatar = document.getElementById("profile-avatar");
     if (avatar) {
         if (m.profileImg) {
+            const imgUrl = m.profileImg.includes('?') ? m.profileImg : `${m.profileImg}?t=${Date.now()}`;
             avatar.innerHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
             avatar.style.background = "transparent";
         } else {
@@ -685,10 +686,15 @@ async function handleProfileUpload(event) {
         const data = await res.json();
 
         if (data.success) {
-            const m = MEMBERS.find(x => x.id === selectedId);
-            if (m) m.profileImg = data.profileImg;
+            const m = MEMBERS.find(x => Number(x.id) === Number(selectedId));
+            if (m) {
+                m.profileImg = `${data.profileImg}?t=${Date.now()}`;
+            }
 
             renderProfile();
+
+            const latest = await loadLatestMembers();
+            if (latest && latest.length > 0) MEMBERS = latest;
 
             Swal.fire({
                 icon: 'success',

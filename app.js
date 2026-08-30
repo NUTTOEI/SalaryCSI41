@@ -503,7 +503,14 @@ app.post('/api/member/upload-profile', uploadAvatar.single('avatar'), async (req
 
         const avatarUrl = req.file.path;
 
-        await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
+        const [result] = await pool.query(
+            "UPDATE members SET profile_img = ? WHERE id = ? OR student_id = ?",
+            [avatarUrl, memberId, memberId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษาในระบบ' });
+        }
 
         res.json({
             success: true,
