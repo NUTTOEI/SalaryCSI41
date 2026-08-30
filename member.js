@@ -635,3 +635,18 @@ async function handleRegister(e) {
         });
     }
 }
+
+function toggleTopMenu() {
+    const menu = document.getElementById("top-dropdown-menu");
+    if (menu) {
+        menu.classList.toggle("hidden");
+    }
+}
+
+document.addEventListener("click", function(event) {
+    const container = document.querySelector(".top-menu-container");
+    const menu = document.getElementById("top-dropdown-menu");
+    if (container && menu && !container.contains(event.target)) {
+        menu.classList.add("hidden");
+    }
+});

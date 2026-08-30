@@ -69,6 +69,17 @@
                 </div>
             </div>
 
+            <div class="top-menu-container">
+                <button id="menu-toggle-btn" class="menu-btn" onclick="toggleTopMenu()">
+                    ☰
+                </button>
+
+                <div id="top-dropdown-menu" class="dropdown-menu hidden">
+                    <a href="#" onclick="logoutStudentId()"><i class="ti ti-logout"></i> ออกจากระบบ</a>
+                    <!-- เพิ่มรายการอื่นๆตรงนี้ -->
+                </div>
+            </div>
+
             <div id="home-screen" class="hidden">
                 <div class="user-bar">
                     <span id="current-user-info"></span>
@@ -133,7 +144,7 @@
             </div>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="data.js"></script>
         <script src="member.js"></script>
     </body>
