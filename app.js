@@ -12,7 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
-const cloudinary = require('cloudinary');
+const cloudinary = require('cloudinary').v2;
 const multerCloudinary = require('multer-storage-cloudinary');
 const CloudinaryStorage = multerCloudinary.CloudinaryStorage || multerCloudinary;
 
@@ -76,7 +76,7 @@ function rowToMember(row) {
         paidWeeks,
         history,
         paid: Array.isArray(paidMonths) && paidMonths.every(Boolean),
-        profileImg: row.profile_img || null
+        profile_img: row.profileImg || null
     };
 }
 
@@ -473,7 +473,7 @@ app.post('/api/admin/branch/upload-profile', uploadAvatar.single('avatar'), asyn
             return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
 
-        const avatarUrl = req.file.path;
+        const avatarUrl = req.file.path || req.file.secure_url;
 
         await pool.query(
             "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
