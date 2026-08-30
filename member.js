@@ -512,14 +512,10 @@ async function loadMembersByStudentId(studentId) {
         const response = await fetch(`/api/members?studentId=${encodeURIComponent(studentId)}`, { cache: "no-store" });
         if (response.ok) {
             const data = await response.json();
-            if (Array.isArray(data) && data.length > 0) return data;
+            return data;
         }
     } catch (e) {
         console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", e);
-    }
-
-    if (typeof MEMBERS !== "undefined" && MEMBERS.length > 0) {
-        return MEMBERS;
     }
     return [];
 }

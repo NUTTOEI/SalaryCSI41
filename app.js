@@ -50,6 +50,7 @@ function rowToMember(row) {
 
     return {
         id: row.id,
+        studentId: row.student_id,
         branch: row.branch,
         name: row.name,
         amount: Number(row.amount),
