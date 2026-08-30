@@ -606,14 +606,32 @@ async function handleRegister(e) {
         const data = await res.json();
 
         if (data.success) {
-            alert('ลงทะเบียนสำเร็จแล้ว! สามารถเข้าสู่ระบบได้ทันที');
-            switchTab('login');
-            const loginInput = document.getElementById('student-id-input');
-            if (loginInput) loginInput.value = studentId;
+           Swal.fire({
+                icon: 'success',
+                title: 'ลงทะเบียนสำเร็จ',
+                text: 'สามารถเข้าสู่ระบบได้ทันที',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#28a745'
+           }).then(() => {
+                switchTab('login');
+                const loginInput = document.getElementById('student-id-input');
+                if (loginInput) loginInput.value = studentId;
+           });
         } else {
-            alert('เกิดข้อผิดพลาด: ' + data.message);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อพิดพลาด',
+                text: data.message,
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#d33'
+            });
         }
     } catch (err) {
-        alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+        Swal.fire({
+            icon: 'error',
+            title: 'การเชื่อมต่อล้มเหลว',
+            text: 'ไม่สามารถเชื่อต่อเซิร์ฟเวอร์ได้',
+            conFirmButtonText: 'ตกลง'
+        });
     }
 }
