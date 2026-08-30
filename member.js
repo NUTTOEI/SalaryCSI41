@@ -662,10 +662,10 @@ function  triggerUploadProfile() {
 }
 
 async function headleProfileUpload(event) {
-    const file = event.target.file[0];
+    const file = event.target.files[0];
     if (!file) return;
 
-    if (!selectId) {
+    if (!selectedId) {
         Swal.file({ icon: 'warning', title: 'กรุณาเข้าสู่ระบบก่อนเปลี่ยนรูปโปรไฟล์' });
         return;
     }
@@ -690,7 +690,7 @@ async function headleProfileUpload(event) {
 
             renderProfile();
 
-            Swal.fore({
+            Swal.fire({
                 icon: 'success',
                 title: 'อัปเดทรูปโปรไฟล์สำเร็จ',
                 timer: 1500,
@@ -705,3 +705,10 @@ async function headleProfileUpload(event) {
         event.target.value = '';
     }
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById('profile-file-input');
+    if (fileInput) {
+        fileInput.addEventListener('change', headleProfileUpload);
+    }
+});
