@@ -12,7 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
-const cloudinary = require('cloudinary');
+const cloudinary = require('cloudinary').v2;
 const multerCloudinary = require('multer-storage-cloudinary');
 const CloudinaryStorage = multerCloudinary.CloudinaryStorage || multerCloudinary;
 
@@ -76,7 +76,7 @@ function rowToMember(row) {
         paidWeeks,
         history,
         paid: Array.isArray(paidMonths) && paidMonths.every(Boolean),
-        profile_img: row.profileImg || null
+        profile_img: row.profile_img || row.profileImg || null
     };
 }
 
@@ -501,7 +501,11 @@ app.post('/api/member/upload-profile', uploadAvatar.single('avatar'), async (req
             return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
 
-        const avatarUrl = req.file.path;
+        const avatarUrl = req.file.path || req.file.secure_url || req.file.url;
+
+        if (!avatarUrl) {
+            return res.status(500).json({ success: false, message: 'ไม่สามารถดึง URL จาก Cloudinary ได้' });
+        }
 
         const [result] = await pool.query(
             "UPDATE members SET profile_img = ? WHERE id = ? OR student_id = ?",
