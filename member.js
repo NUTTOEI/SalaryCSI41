@@ -145,10 +145,18 @@ function renderProfile() {
     const tint = typeof tintFor === "function" ? tintFor(m.id) : { bg: "#eef0fb", fg: "#4c5fd5" };
     const avatar = document.getElementById("profile-avatar");
     if (avatar) {
-        if (m.profileImg) {
+
+        const rawImg = m.profile_img || m.profileImg;
+        const isValidImg = rawImg && String(rawImg).trim() !== "" && rawImg !== "undefined" && rawImg !== "null";
+        if (isValidImg) {
             const imgUrl = m.profileImg.includes('?') ? m.profileImg : `${m.profileImg}?t=${Date.now()}`;
-            avatar.innerHTML = `<img src="${imgUrl}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
             avatar.style.background = "transparent";
+            avatar.innerHTML = `
+            <img src="${imgUrl}" alt="${m.name}" 
+                 style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"
+                 onerror="this.onerror=null; this.parentElement.style.background='${tint.bg}'; this.parentElement.style.color='${tint.fg}'; this.parentElement.innerHTML='${memberNumber(m)}';">
+            `;
+            
         } else {
             avatar.textContent = memberNumber(m);
             avatar.style.background = tint.bg;

@@ -256,7 +256,9 @@ function renderRow(m, index) {
     const avatarUrl = rawAvatar ? (rawAvatar.includes('?') ? rawAvatar : `${rawAvatar}?t=${Date.now()}`) : null;
     
     const avatarContent = avatarUrl
-        ? `<img src="${avatarUrl}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
+        ? `<img src="${avatarUrl}" alt="${m.name}" 
+            style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" 
+            onerror="this.onerror=null; this.parentElement.style.background='${tint.bg}'; this.parentElement.style.color='${tint.fg}'; this.parentElement.innerHTML='${displayNum}';">`
         : displayNum;
 
     const avatarStyle = avatarUrl
