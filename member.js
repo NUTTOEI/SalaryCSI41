@@ -672,7 +672,7 @@ async function headleProfileUpload(event) {
 
     const formData = new FormData();
     formData.append('avatar', file);
-    formData.append('memberId', selectId);
+    formData.append('memberId', selectedId);
 
     try {
         Swal.file({ title: 'กำลังโหลด...', allowOutsideClick: false, disOpen: () => Swal.showLoading() });
