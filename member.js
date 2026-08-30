@@ -666,7 +666,7 @@ async function headleProfileUpload(event) {
     if (!file) return;
 
     if (!selectedId) {
-        Swal.file({ icon: 'warning', title: 'กรุณาเข้าสู่ระบบก่อนเปลี่ยนรูปโปรไฟล์' });
+        Swal.fire({ icon: 'warning', title: 'กรุณาเข้าสู่ระบบก่อนเปลี่ยนรูปโปรไฟล์' });
         return;
     }
 
@@ -675,7 +675,7 @@ async function headleProfileUpload(event) {
     formData.append('memberId', selectedId);
 
     try {
-        Swal.file({ title: 'กำลังโหลด...', allowOutsideClick: false, disOpen: () => Swal.showLoading() });
+        Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         const res = await fetch('/api/member/upload-profile', {
             method: 'POST',
@@ -709,6 +709,6 @@ async function headleProfileUpload(event) {
 document.addEventListener("DOMContentLoaded", function () {
     const fileInput = document.getElementById('profile-file-input');
     if (fileInput) {
-        fileInput.addEventListener('change', headleProfileUpload);
+        fileInput.addEventListener('change', handleProfileUpload);
     }
 });
