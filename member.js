@@ -661,7 +661,7 @@ function  triggerUploadProfile() {
     if (fileInput) fileInput.click();
 }
 
-async function headleProfileUpload(event) {
+async function handleProfileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
