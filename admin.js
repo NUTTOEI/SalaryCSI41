@@ -1,6 +1,20 @@
 if (typeof MEMBERS === "undefined") MEMBERS = [];
 if (typeof TARGET_AMOUNT === "undefined") TARGET_AMOUNT = 0;
 
+function getValidProfileUrl(m) {
+    if (!m) return null;
+    const raw = m.profile_img || m.profileImg;
+    if (!raw) return null;
+    
+    const clean = String(raw).trim().toLowerCase();
+    // คัดกรองค่าว่าง หรือคำว่า "undefined" / "null" ออกทั้งหมด
+    if (clean === "" || clean === "undefined" || clean === "null" || clean.endsWith("/undefined")) {
+        return null;
+    }
+    
+    return raw.includes('?') ? raw : `${raw}?t=${Date.now()}`;
+}
+
 function getActiveMonthIndex() {
     const val = localStorage.getItem("fund-dashboard-active-month");
     return val !== null ? Number(val) : new Date().getMonth();
@@ -252,8 +266,8 @@ function renderRow(m, index) {
     const historyCount = m.history ? m.history.length : 0;
     const branchBadge = `<span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; margin-left:6px;">${m.branch || 'comsci41'}</span>`;
 
-    const rawAvatar = m.profile_img || m.profileImg;
-    const avatarUrl = rawAvatar ? (rawAvatar.includes('?') ? rawAvatar : `${rawAvatar}?t=${Date.now()}`) : null;
+    // ✅ เปลี่ยนมาใช้ฟังก์ชัน getValidProfileUrl(m) เพื่อกรอง "undefined" และ "null" ออกอย่างถูกต้อง
+    const avatarUrl = getValidProfileUrl(m);
     
     const avatarContent = avatarUrl
         ? `<img src="${avatarUrl}" alt="${m.name}" 

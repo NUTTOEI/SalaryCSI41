@@ -7,6 +7,20 @@ let currentStudentId = localStorage.getItem("fund-dashboard-student-id") || null
 if (typeof MEMBERS === "undefined") var MEMBERS = [];
 if (typeof TARGET_AMOUNT === "undefined") var TARGET_AMOUNT = 0;
 
+function getValidProfileUrl(m) {
+    if (!m) return null;
+    const raw = m.profile_img || m.profileImg;
+    if (!raw) return null;
+    
+    const clean = String(raw).trim().toLowerCase();
+    // คัดกรองค่าว่าง หรือคำว่า "undefined" / "null" ออกทั้งหมด
+    if (clean === "" || clean === "undefined" || clean === "null" || clean.endsWith("/undefined")) {
+        return null;
+    }
+    
+    return raw.includes('?') ? raw : `${raw}?t=${Date.now()}`;
+}
+
 function getActiveMonthIndex() {
     return new Date().getMonth();
 }
@@ -145,18 +159,16 @@ function renderProfile() {
     const tint = typeof tintFor === "function" ? tintFor(m.id) : { bg: "#eef0fb", fg: "#4c5fd5" };
     const avatar = document.getElementById("profile-avatar");
     if (avatar) {
+        // ✅ เปลี่ยนมาใช้ฟังก์ชัน getValidProfileUrl(m) ที่เตรียมไว้ด้านบน
+        const imgUrl = getValidProfileUrl(m);
 
-        const rawImg = m.profile_img || m.profileImg;
-        const isValidImg = rawImg && String(rawImg).trim() !== "" && rawImg !== "undefined" && rawImg !== "null";
-        if (isValidImg) {
-            const imgUrl = m.profileImg.includes('?') ? m.profileImg : `${m.profileImg}?t=${Date.now()}`;
+        if (imgUrl) {
             avatar.style.background = "transparent";
             avatar.innerHTML = `
             <img src="${imgUrl}" alt="${m.name}" 
                  style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"
                  onerror="this.onerror=null; this.parentElement.style.background='${tint.bg}'; this.parentElement.style.color='${tint.fg}'; this.parentElement.innerHTML='${memberNumber(m)}';">
             `;
-            
         } else {
             avatar.textContent = memberNumber(m);
             avatar.style.background = tint.bg;
