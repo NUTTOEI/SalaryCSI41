@@ -145,10 +145,15 @@ function renderProfile() {
     const tint = typeof tintFor === "function" ? tintFor(m.id) : { bg: "#eef0fb", fg: "#4c5fd5" };
     const avatar = document.getElementById("profile-avatar");
     if (avatar) {
+        if (m.profileImg) {
+            avatar.innerHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            avatar.style.background = "transparent";
+        } else {
         avatar.textContent = memberNumber(m);
         avatar.style.background = tint.bg;
         avatar.style.color = tint.fg;
     }
+}
 
     if (document.getElementById("profile-name")) document.getElementById("profile-name").textContent = m.name;
 
@@ -650,3 +655,53 @@ document.addEventListener("click", function(event) {
         menu.classList.add("hidden");
     }
 });
+
+function  triggerUploadProfile() {
+    const fileInput = document.getElementById('profile-file-input');
+    if (fileInput) fileInput.click();
+}
+
+async function headleProfileUpload(event) {
+    const file = event.target.file[0];
+    if (!file) return;
+
+    if (!selectId) {
+        Swal.file({ icon: 'warning', title: 'กรุณาเข้าสู่ระบบก่อนเปลี่ยนรูปโปรไฟล์' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+    formData.append('memberId', selectId);
+
+    try {
+        Swal.file({ title: 'กำลังโหลด...', allowOutsideClick: false, disOpen: () => Swal.showLoading() });
+
+        const res = await fetch('/api/member/upload-profile', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            const m = MEMBERS.find(x => x.id === selectedId);
+            if (m) m.profileImg = data.profileImg;
+
+            renderProfile();
+
+            Swal.fore({
+                icon: 'success',
+                title: 'อัปเดทรูปโปรไฟล์สำเร็จ',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: data.message });
+        }
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'การเชื่อมต่อล้มเหลว', text: 'ไม่สามารถอัปโหลดรูปภาพได้' });
+    } finally {
+        event.target.value = '';
+    }
+}

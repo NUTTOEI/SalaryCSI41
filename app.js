@@ -58,6 +58,7 @@ function rowToMember(row) {
         paidWeeks,
         history,
         paid: Array.isArray(paidMonths) && paidMonths.every(Boolean),
+        profileImg: row.profile_img || null
     };
 }
 
@@ -700,3 +701,28 @@ app.post('/api/member/login', async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 });
+
+app.post('/api/member/upload-profile', uploadBranchAvatar.single('avatar'), async (req, res) => {
+    try {
+        const { memberId } = req.body;
+        if (!memberId) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุ ID สมาชิก' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
+        }
+
+        const avatarUrl = `/api/upload${req.file.filename}`;
+
+        await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
+
+        res.json({
+            success: true,
+            message: 'อัปเดทรูปโปรไฟล์สำเร็จ',
+            profileImg: avatarUrl
+        });
+    } catch (error) {
+        console.error('Member Avatar Upload Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
+    }
+})
