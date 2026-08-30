@@ -265,7 +265,7 @@ function renderRow(m, index) {
 
     return `
     <div class="member-row" data-toggle-id="${m.id}">
-        <div class="m-avatar" style="background:${tint.bg};color:${tint.fg}">${displayNum}</div>
+        <div class="m-avatar" style="${avatarStyle}">${avatarContent}</div>
         <div class="m-text">
             <div class="m-name">${m.name} ${branchBadge}</div>
             <div class="m-sub">${subText}</div>

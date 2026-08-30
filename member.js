@@ -134,7 +134,7 @@ function getNextUnpaidIndex(m, mode, activeMonth, activeWeek) {
 }
 
 function renderProfile() {
-    const m = MEMBERS.find(x => x.id === selectedId);
+    const m = MEMBERS.find(x => Number(x.id) === Number(selectedId));
     if (!m) return;
 
     const statusInfo = getMemberStatus(m);
@@ -147,14 +147,15 @@ function renderProfile() {
     if (avatar) {
         if (m.profileImg) {
             const imgUrl = m.profileImg.includes('?') ? m.profileImg : `${m.profileImg}?t=${Date.now()}`;
-            avatar.innerHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            avatar.innerHTML = `<img src="${imgUrl}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
             avatar.style.background = "transparent";
         } else {
-        avatar.textContent = memberNumber(m);
-        avatar.style.background = tint.bg;
-        avatar.style.color = tint.fg;
+            avatar.textContent = memberNumber(m);
+            avatar.style.background = tint.bg;
+            avatar.style.color = tint.fg;
+        }
     }
-}
+    
 
     if (document.getElementById("profile-name")) document.getElementById("profile-name").textContent = m.name;
 
