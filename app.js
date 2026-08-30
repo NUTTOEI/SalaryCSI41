@@ -511,6 +511,18 @@ app.post('/webhook', (req, res) => {
     res.sendStatus(200);
 });
 
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
+        }
+        return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
