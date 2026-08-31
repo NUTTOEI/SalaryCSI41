@@ -289,7 +289,7 @@ app.get('/api/settings/target', async (req, res) => {
 
 app.put('/api/settings/target', async (req, res) => {
     try {
-        const { target, barnch } = req.body;
+        const { target, branch } = req.body;
         const targetNum = Number(target);
         if (!isFinite(targetNum) || targetNum <= 0) {
             return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
@@ -297,13 +297,13 @@ app.put('/api/settings/target', async (req, res) => {
 
         const key = brnach ? `target_amount_${branch}` : 'target_amount';
         await pool.query(
-            "INSERT INTO setting (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
+            "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
             [key, String(targetNum), String(targetNum)]
         );
         res.json({ status: 'success', target: targetNum });
     } catch (err) {
-        console.error('PUT /api/setting/target error:', err);
-        res.status(500),json({ status: 'error', message: err.message });
+        console.error('PUT /api/settings/target error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
     }
 });
 

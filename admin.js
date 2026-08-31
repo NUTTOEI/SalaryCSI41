@@ -200,7 +200,7 @@ async function applyRateToAll() {
 async function addMember(studentId, name) {
     const trimmedId = studentId.trim();
     const trimmedName = name.trim();
-    if (!trimmedId || trimmedName) return;
+    if (!trimmedId || !trimmedName) return;
 
     const branchSelect = document.getElementById("new-branch-select");
     const selectBranch = branchSelect ? branchSelect.value : (sessionStorage.getItem("admin_branch") || "comsci41");

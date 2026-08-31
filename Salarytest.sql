@@ -63,3 +63,13 @@ CREATE TABLE IF NOT EXISTS `admins` (
 INSERT INTO `admins` (`id`, `student_id`, `name`, `branch`, `created_at`) 
 VALUES (9, '6821207004', 'สมชาย', 'COM', '2026-08-28 11:07:29');
 
+-- เพิ่มคอลัมน์ที่ขาดในตาราง members
+ALTER TABLE `members` 
+ADD COLUMN `student_id` VARCHAR(50) AFTER `id`,
+ADD COLUMN `profile_img` VARCHAR(255) DEFAULT NULL AFTER `history`;
+
+-- เพิ่มตารางสำหรับเก็บประวัติสลิปที่ตรวจสอบแล้ว (ใน app.js มีการใช้งาน)
+CREATE TABLE IF NOT EXISTS `processed_slips` (
+    `trans_ref` VARCHAR(100) PRIMARY KEY,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
