@@ -12,7 +12,8 @@ const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
-const cloudinary = require('cloudinary');
+// ✅ แก้ไข: เรียกใช้ Cloudinary v2 เพื่อความเสถียรและความเข้ากันได้กับ Storage Engine
+const cloudinary = require('cloudinary').v2;
 const multerCloudinary = require('multer-storage-cloudinary');
 const CloudinaryStorage = multerCloudinary.CloudinaryStorage || multerCloudinary;
 
@@ -45,7 +46,6 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 const upload = multer({ storage: multer.memoryStorage() });
-const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_IDS = [
@@ -203,57 +203,42 @@ app.put('/api/admin/members/:id/amount', async (req, res) => {
 });
 
 app.post('/api/admin/toggle-paid', async (req, res) => {
-    const conn = await pool.getConnection();
+    let conn;
     try {
+        conn = await pool.getConnection();
         const { memberId, mode, monthIndex, weekIndex } = req.body;
+
         const [rows] = await conn.query('SELECT * FROM members WHERE id = ? FOR UPDATE', [memberId]);
         if (rows.length === 0) {
-            conn.release();
             return res.status(404).json({ status: 'error', message: 'ไม่พบสมาชิก' });
         }
-        const member = rows[0];
-        const rate = Number(member.amount) || 100;
-        const history = Array.isArray(member.history) ? member.history : (typeof member.history === 'string' ? JSON.parse(member.history) : []);
-        const nowDate = new Date().toLocaleDateString('th-TH');
 
-        if (mode === 'week') {
-            const rawWeeks = member.paid_weeks;
-            const paidWeeks = Array.isArray(rawWeeks) ? rawWeeks.slice() : (typeof rawWeeks === 'string' ? JSON.parse(rawWeeks) : DEFAULT_WEEKS());
-            const newStatus = !Boolean(paidWeeks[weekIndex]);
-            paidWeeks[weekIndex] = newStatus;
-            history.push({
-                date: nowDate,
-                method: newStatus ? 'Admin บันทึกชำระเงิน' : 'Admin ยกเลิกการชำระ',
-                amount: newStatus ? rate : -rate,
-                weeks: [weekIndex],
-            });
-            await conn.query(
-                'UPDATE members SET paid_weeks = ?, history = ? WHERE id = ?',
-                [JSON.stringify(paidWeeks), JSON.stringify(history), memberId]
-            );
-        } else {
-            const rawMonths = member.paid_months;
-            const paidMonths = Array.isArray(rawMonths) ? rawMonths.slice() : (typeof rawMonths === 'string' ? JSON.parse(rawMonths) : DEFAULT_MONTHS());
-            const newStatus = !Boolean(paidMonths[monthIndex]);
-            paidMonths[monthIndex] = newStatus;
-            history.push({
-                date: nowDate,
-                method: newStatus ? 'Admin บันทึกชำระเงิน' : 'Admin ยกเลิกการชำระ',
-                amount: newStatus ? rate : -rate,
-                months: [monthIndex],
-            });
-            await conn.query(
-                'UPDATE members SET paid_months = ?, history = ? WHERE id = ?',
-                [JSON.stringify(paidMonths), JSON.stringify(history), memberId]
-            );
+        const member = rows[0];
+        let paidHistory = {};
+        try {
+            paidHistory = typeof member.paid_history === 'string' 
+                ? JSON.parse(member.paid_history || '{}') 
+                : (member.paid_history || {});
+        } catch (e) {
+            paidHistory = {};
         }
 
-        conn.release();
-        res.json({ status: 'success' });
+        if (mode === 'month') {
+            const key = `m_${monthIndex}`;
+            paidHistory[key] = !paidHistory[key];
+        } else if (mode === 'week') {
+            const key = `w_${monthIndex}_${weekIndex}`;
+            paidHistory[key] = !paidHistory[key];
+        }
+
+        await conn.query('UPDATE members SET paid_history = ? WHERE id = ?', [JSON.stringify(paidHistory), memberId]);
+
+        res.json({ status: 'success', paidHistory });
     } catch (err) {
-        conn.release();
         console.error('POST /api/admin/toggle-paid error:', err);
         res.status(500).json({ status: 'error', message: err.message });
+    } finally {
+        if (conn) conn.release();
     }
 });
 
@@ -296,15 +281,23 @@ app.put('/api/settings/target', async (req, res) => {
 app.get('/api/settings/target', async (req, res) => {
     try {
         const { branch } = req.query;
-        // ค้นหาข้อมูล target จาก DB หรือคืนค่าเริ่มต้นตาม branch
-        const targetAmount = 10000; // หรือดึงจากตาราง settings ใน Database
+        let query = 'SELECT * FROM settings';
+        let params = [];
 
-        res.json({ branch, target: targetAmount });
-    } catch (error) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" });
+        if (branch) {
+            query += ' WHERE branch_code = ?';
+            params.push(branch);
+        }
+
+        query += ' ORDER BY updated_at DESC'; 
+
+        const [rows] = await pool.query(query, params);
+        res.json({ status: 'success', data: rows });
+    } catch (err) {
+        console.error('GET /api/settings/target error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
     }
 });
-
 
 app.put('/api/admin/members/amount-all', async (req, res) => {
     try {
@@ -392,7 +385,6 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             }
         }
 
-        // ตรวจสอบชื่อบัญชีผู้รับเงิน
         const isReceiverValid = receiverName.toLowerCase().includes(expectedReceiverName.toLowerCase());
 
         if (!isReceiverValid) {
@@ -451,7 +443,6 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API: รูปโปรไฟล์สาขา และ รูปโปรไฟล์สมาชิก                              */
 /* ------------------------------------------------------------------ */
-
 
 const uploadAvatar = multer({
    storage: avatarStorage,
@@ -549,32 +540,28 @@ app.post('/api/member/upload-profile', uploadAvatar.single('avatar'), async (req
 app.post('/api/admin/register', async (req, res) => {
     try {
         const { studentId, name, branch } = req.body;
+        
         if (!studentId || !name || !branch) {
             return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
         }
 
-        const cleanBranch = branch.trim();
+        const cleanBranch = String(branch).trim().toUpperCase();
+        const cleanStudentId = String(studentId).trim();
 
-        const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
-        if (existingBranch.length === 0) {
-            await pool.query(
-                "INSERT INTO branches (branch_code, branch_name, profile_img) VALUES (?, ?, ?)",
-                [cleanBranch, cleanBranch, `${cleanBranch}.png`]
-            );
+        const [existing] = await pool.query('SELECT id FROM admins WHERE student_id = ?', [cleanStudentId]);
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้ถูกลงทะเบียนแอดมินแล้ว' });
         }
 
         await pool.query(
-            "INSERT INTO admins (student_id, name, branch) VALUES (?, ?, ?)",
-            [studentId.trim(), name.trim(), cleanBranch]
+            'INSERT INTO admins (student_id, name, branch) VALUES (?, ?, ?)',
+            [cleanStudentId, name.trim(), cleanBranch]
         );
 
-        res.json({ success: true, message: 'ลงทะเบียนแอดมินสำเร็จ' });
-    } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้เคยลงทะเบียนไว้แล้ว' });
-        }
-        console.error('Register Admin Error:', err);
-        res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: 'ลงทะเบียนผู้ดูแลระบบสำเร็จ' });
+    } catch (error) {
+        console.error('Admin registration error:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลงทะเบียน' });
     }
 });
 
@@ -696,7 +683,57 @@ app.post('/api/member/login', async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* หน้าแรก + Webhook + Error Handling + Start Server                  */
+/* API: ตั้งค่า PromptPay                                              */
+/* ------------------------------------------------------------------ */
+
+app.put('/api/settings/promptpay', async (req, res) => {
+    try {
+        const { branch, promptpayId, promptpayName } = req.body;
+        if (!branch) {
+            return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
+        }
+        
+        const cleanBranch = String(branch).trim().toUpperCase();
+
+        await pool.query(
+            `INSERT INTO branches (branch_code, branch_name, promptpay_id, promptpay_name)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE promptpay_id = VALUES(promptpay_id), promptpay_name = VALUES(promptpay_name)`,
+            [cleanBranch, cleanBranch, promptpayId, promptpayName]
+        );
+
+        res.json({ status: 'success', message: 'บันทึกพร้อมเพย์ประจำสาขาสำเร็จ' });
+    } catch (err) {
+        console.error('PUT /api/settings/promptpay error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+app.get('/api/settings/promptpay', async (req, res) => {
+    try {
+        const { branch } = req.query;
+        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
+
+        const [rows] = await pool.query(
+            "SELECT promptpay_id, promptpay_name FROM branches WHERE branch_code = ?",
+            [branch]
+        );
+
+        if (rows.length > 0) {
+            res.json({
+                promptpayId: rows[0].promptpay_id,
+                promptpayName: rows[0].promptpay_name
+            });
+        } else {
+            res.json({});
+        }
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+/* ------------------------------------------------------------------ */
+/* หน้าแรก + Webhook + Error Handling                                 */
 /* ------------------------------------------------------------------ */
 
 app.get('/', (req, res) => {
@@ -727,64 +764,9 @@ app.use((err, req, res, next) => {
     next();
 });
 
+// ✅ แก้ไข: ย้าย app.listen มาไว้ล่างสุดของไฟล์ หลังจากประกาศ API Routes ทั้งหมดแล้ว
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
-});
-
-app.put('/api/settings/promptpay', async (req, res) => {
-    try {
-        const { branch, promptpayId, promptpayName } = req.body;
-        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
-        
-        await pool.query(
-            "UPDATE branches SET promptpay_id = ?, promptpay_name = ? WHERE branch_code = ?",
-            [promptpayId, promptpayName, branch]
-        );
-
-        res.json({ status: 'success', message: 'บันทึกพร้อมเพย์ประจำสาขาสำเร็จ' });
-    } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
-app.get('/api/settings/promptpay', async (req, res) => {
-    try {
-        const { branch } = req.query;
-        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
-
-        const [rows] = await pool.query(
-            "SELECT promptpay_id, promptpay_name FROM branches WHERE branch_code = ?",
-            [branch]
-        );
-
-        if (rows.length > 0) {
-            res.json({
-                promptpayId: rows[0].promptpay_id,
-                promptpayName: rows[0].promptpay_name
-            });
-        } else {
-            res.json({});
-        }
-    } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
-
-app.put('/api/setting/promptpay', async (req, res) => {
-    try {
-        const { branch, promptpayId, promptpayName } = req.body;
-        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
-        
-        await pool.query(
-            "UPDATE branches SET promptpay_id = ?, promptpay_name = ? WHERE branch_code = ?",
-            [promptpayId, promptpayName, branch]
-        );
-
-        res.json({ status: 'success', message: 'บันทึกพร้อมเพล์ประจำสาขาสำเร็จ' });
-    } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
-    }
 });

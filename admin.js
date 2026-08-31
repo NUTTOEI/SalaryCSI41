@@ -7,12 +7,10 @@ function getValidProfileUrl(m) {
     if (!raw) return null;
     
     const clean = String(raw).trim().toLowerCase();
-    // คัดกรองค่าว่าง หรือคำว่า "undefined" / "null" ออกทั้งหมด
     if (clean === "" || clean.includes("undefined") || clean.includes("null")) {
         return null;
     }
     
-   
     const baseUrl = raw.split('?')[0];
     return `${baseUrl}?t=${Date.now()}`;
 }
@@ -117,12 +115,14 @@ function computeStats() {
     return { paid, unpaid, collected, target, pct };
 }
 
+// ✅ แก้ไข: เพิ่มการค้นหาจากรหัสนักศึกษา (studentId) นอกเหนือจากการค้นหาชื่อ
 function sortedFilteredMembers() {
     const q = state.query.trim().toLowerCase();
     let items = MEMBERS.filter(m => {
         const isPaid = isMemberPaidCurrent(m);
-        // ✅ รองรับการค้นหาแบบ Case-insensitive
-        const isMatch = m.name ? m.name.toLowerCase().includes(q) : false;
+        const matchName = m.name ? m.name.toLowerCase().includes(q) : false;
+        const matchId = m.studentId ? String(m.studentId).toLowerCase().includes(q) : false;
+        const isMatch = matchName || matchId;
         const f = state.filter === "all" ? true : state.filter === "paid" ? isPaid : !isPaid;
         return isMatch && f;
     });
@@ -197,28 +197,42 @@ async function applyRateToAll() {
     }
 }
 
+// ✅ แก้ไข: ปรับฟังก์ชัน addMember ให้รับ studentId และ name โดยตรง และส่ง JSON body ตรงตาม Backend API
 async function addMember(studentId, name) {
-    const trimmedId = studentId.trim();
-    const trimmedName = name.trim();
-    if (!trimmedId || !trimmedName) return; // แก้จาก !trimmedName ให้ทำงานถูกต้อง
+    const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
 
-    const branchSelect = document.getElementById("new-branch-select");
-    const selectBranch = branchSelect ? branchSelect.value : (sessionStorage.getItem("admin_branch") || "comsci41");
+    if (!studentId || !String(studentId).trim()) {
+        alert("กรุณากรอกรหัสนักศึกษา");
+        return;
+    }
+    if (!name || !String(name).trim()) {
+        alert("กรุณากรอกชื่อ-นามสกุล");
+        return;
+    }
 
     try {
-        await fetch("/api/admin/members", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                studentId: trimmedId,
-                name: trimmedName, 
-                amount: state.ratePreview,
-                branch: selectBranch
+        const response = await fetch('/api/admin/members', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                studentId: String(studentId).trim(),
+                name: String(name).trim(),
+                branch: currentBranch,
+                amount: state.ratePreview || 100
             })
         });
-        await loadFromStorage();
-    } catch (err) {
-        console.error("Error adding member:", err);
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            alert('เพิ่มสมาชิกสำเร็จ');
+            await loadFromStorage();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + (result.message || 'ไม่สามารถเพิ่มสมาชิกได้'));
+        }
+    } catch (error) {
+        console.error('Error adding member:', error);
+        alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     }
 }
 
@@ -498,15 +512,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (applyRateBtn) applyRateBtn.addEventListener("click", applyRateToAll);
 
     if (addBtn && nameInput) {
-    const studentIdInput = document.getElementById("new-studentid-input");
-    addBtn.addEventListener("click", () => {
-        const studentId = studentIdInput ? studentIdInput.value : "";
-        addMember(studentId, nameInput.value);
-        if (studentIdInput) studentIdInput.value = "";
-        nameInput.value = "";
-        nameInput.focus();
-    });
-}
+        const studentIdInput = document.getElementById("new-studentid-input");
+        addBtn.addEventListener("click", () => {
+            const studentId = studentIdInput ? studentIdInput.value : "";
+            addMember(studentId, nameInput.value);
+            if (studentIdInput) studentIdInput.value = "";
+            nameInput.value = "";
+            nameInput.focus();
+        });
+    }
 
     if (exportExcelBtn) exportExcelBtn.addEventListener("click", exportMembersToExcel);
     if (statTargetBtn) statTargetBtn.addEventListener("click", openTargetModal);
