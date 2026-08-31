@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ตัวแปรเก็บพร้อมเพย์ประจำสาขา
     let currentBranchPromptPay = {
-        promptpayId: "0942411478",
+        promptpayId: "0863481103",
         promptpayName: "เหรัญญิกประจำสาขา"
     };
 
