@@ -376,7 +376,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         const receiverName = slipData.receiver?.name || '';
         const userBranch = req.body.branch;
-        let expectedReceiverName = "สุพรรณณิกา";
+        let expectedReceiverName = "ณัฐวัฒน์";
 
         if (userBranch) {
             const [bRows] = await pool.query("SELECT promptpay_name FROM branches WHERE branch_code = ?", [userBranch]);
