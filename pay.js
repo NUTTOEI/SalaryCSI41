@@ -356,8 +356,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // แก้ไขใน Frontend
 async function markPending(method) {
-    const selectedCount = COLLECTION_MODE === "month" ? selectedMonths.length : selectedWeeks.length;
+    const isMonthMode = COLLECTION_MODE === "month";
+    const selectedList = isMonthMode ? selectedMonths : selectedWeeks;
+    const selectedCount = selectedList.length;
     const currentPayAmount = selectedCount * rate;
+
+    if (selectedCount === 0) {
+        alert("กรุณาเลือกรายการที่ต้องการชำระก่อนครับ");
+        return;
+    }
 
     if (method === "PromptPay") {
         const slipInput = document.getElementById("slip-file");
@@ -370,6 +377,11 @@ async function markPending(method) {
         formData.append("slip_image", slipInput.files[0]);
         formData.append("expected_amount", currentPayAmount);
         formData.append("branch", member ? member.branch : ""); 
+
+        // 📌 เพิ่ม 3 บรรทัดนี้ส่งไปให้ Backend
+        formData.append("student_id", member.student_id || member.studentId || member.id || member._id);
+        formData.append("mode", COLLECTION_MODE); // 'month' หรือ 'week'
+        formData.append("index", selectedList[0]); // ส่ง Index ของเดือนหรือสัปดาห์ที่เลือก
 
         try {
             const res = await fetch("/verify-slip", {
@@ -388,9 +400,7 @@ async function markPending(method) {
             alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         }
     } else if (method === "เงินสด") {
-        // บันทึกรายการเงินสด หรือส่งเข้า API แจ้งยอดเงินสด
         alert(`รับแจ้งชำระเงินสดจำนวน ฿${currentPayAmount} เรียบร้อยแล้ว`);
-        // TODO: ยิง API แจ้งแอดมินหรือบันทึกสถานะรออนุมัติ
     }
 }
 
