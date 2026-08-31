@@ -293,6 +293,18 @@ app.put('/api/settings/target', async (req, res) => {
     }
 });
 
+app.get('/api/settings/target', async (req, res) => {
+    try {
+        const { branch } = req.query;
+        // ค้นหาข้อมูล target จาก DB หรือคืนค่าเริ่มต้นตาม branch
+        const targetAmount = 10000; // หรือดึงจากตาราง settings ใน Database
+
+        res.json({ branch, target: targetAmount });
+    } catch (error) {
+        res.status(500).json({ message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" });
+    }
+});
+
 
 app.put('/api/admin/members/amount-all', async (req, res) => {
     try {
