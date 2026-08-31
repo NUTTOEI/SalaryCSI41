@@ -13,11 +13,36 @@ const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
 
+// 🟢 [1. นำเข้า Cloudinary และ Streamifier]
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 app.use(express.static(__dirname)); // serve admin.html, member.html, pay.html, css, รูป ฯลฯ
+
+// 🟢 [2. ตั้งค่า Cloudinary - ใส่ API Keys ของคุณที่นี่หรือใน .env]
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'YOUR_CLOUD_NAME',
+    api_key: process.env.CLOUDINARY_API_KEY || 'YOUR_API_KEY',
+    api_secret: process.env.CLOUDINARY_API_SECRET || 'YOUR_API_SECRET'
+});
+
+// 🟢 [3. Helper อัปโหลด Buffer ไป Cloudinary]
+const uploadToCloudinary = (fileBuffer) => {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { folder: 'member_profiles' },
+            (error, result) => {
+                if (result) resolve(result);
+                else reject(error);
+            }
+        );
+        streamifier.createReadStream(fileBuffer).pipe(stream);
+    });
+};
 
 // ตรวจสอบและสร้างโฟลเดอร์ uploads อัตโนมัติหากยังไม่มี
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -132,7 +157,6 @@ app.post('/api/admin/members', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุชื่อ' });
         }
 
-        // 🟢 [แก้ไข] ต้องระบุ branch เสมอ ห้ามใส่ค่า Default เป็น 'comsci41'
         if (!branch) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา (branch)' });
         }
@@ -493,48 +517,9 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
 });
 
 /* ------------------------------------------------------------------ */
-/* หน้าแรก + Webhook + start server                                    */
-/* ------------------------------------------------------------------ */
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'member.html'));
-});
-
-app.post('/webhook', (req, res) => {
-    const events = req.body.events || [];
-    events.forEach(event => {
-        if (event.source && event.source.userId) {
-            console.log('====================================');
-            console.log('User ID ของคนที่ทักมา:', event.source.userId);
-            console.log('====================================');
-        }
-    });
-    res.sendStatus(200);
-});
-
-app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
-        }
-        return res.status(400).json({ success: false, message: err.message });
-    } else if (err) {
-        return res.status(400).json({ success: false, message: err.message });
-    }
-    next();
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    await testConnection();
-});
-
-
-/* ------------------------------------------------------------------ */
 /* API: สมัครสมาชิก และ เข้าสู่ระบบแอดมิน                                 */
 /* ------------------------------------------------------------------ */
 
-// 1. API ลงทะเบียนแอดมินใหม่ (เก็บเข้า MySQL)
 app.post('/api/admin/register', async (req, res) => {
     try {
         const { studentId, name, branch } = req.body;
@@ -544,7 +529,6 @@ app.post('/api/admin/register', async (req, res) => {
 
         const cleanBranch = branch.trim();
 
-        // 🟢 [เพิ่มจุดนี้] ตรวจสอบก่อนว่ามีสาขานี้ในตาราง branches หรือยัง ถ้ายังไม่มีให้เพิ่มอัตโนมัติ
         const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
         if (existingBranch.length === 0) {
             await pool.query(
@@ -568,7 +552,6 @@ app.post('/api/admin/register', async (req, res) => {
     }
 });
 
-// 2. API ตรวจสอบรหัสนักศึกษาเพื่อเข้าสู่ระบบ
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { studentId } = req.body;
@@ -617,7 +600,6 @@ app.post('/api/member/register', async (req, res) => {
         const cleanName = String(name).trim();
         const cleanBranch = String(branch).trim().toUpperCase();
 
-        // 🟢 [แก้ไขจุดนี้] ตรวจสอบว่ามีสาขาในตาราง branches หรือยัง หากยังไม่มีให้สร้างให้อัตโนมัติ
         const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
         if (existingBranch.length === 0) {
             await pool.query(
@@ -687,7 +669,8 @@ app.post('/api/member/login', async (req, res) => {
     }
 });
 
-app.post('/api/member/upload-profile', uploadBranchAvatar.single('avatar'), async (req, res) => {
+// 🟢 [4. API อัปโหลดรูปโปรไฟล์สมาชิกเข้า Cloudinary (ย้ายขึ้นมาตรงนี้แล้ว)]
+app.post('/api/member/upload-profile', upload.single('avatar'), async (req, res) => {
     try {
         const { memberId } = req.body;
         if (!memberId) {
@@ -697,8 +680,11 @@ app.post('/api/member/upload-profile', uploadBranchAvatar.single('avatar'), asyn
             return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
 
-        const avatarUrl = `/uploads/${req.file.filename}`;
+        // อัปโหลดขึ้น Cloudinary
+        const result = await uploadToCloudinary(req.file.buffer);
+        const avatarUrl = result.secure_url;
 
+        // อัปเดต URL รูปภาพลงใน MySQL
         await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
 
         res.json({
@@ -710,4 +696,43 @@ app.post('/api/member/upload-profile', uploadBranchAvatar.single('avatar'), asyn
         console.error('Member Avatar Upload Error:', error);
         res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
     }
-})
+});
+
+/* ------------------------------------------------------------------ */
+/* หน้าแรก + Webhook + start server                                    */
+/* ------------------------------------------------------------------ */
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'member.html'));
+});
+
+app.post('/webhook', (req, res) => {
+    const events = req.body.events || [];
+    events.forEach(event => {
+        if (event.source && event.source.userId) {
+            console.log('====================================');
+            console.log('User ID ของคนที่ทักมา:', event.source.userId);
+            console.log('====================================');
+        }
+    });
+    res.sendStatus(200);
+});
+
+// 🔴 [5. Error Middleware - อยู่ท้ายสุดก่อน app.listen]
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
+        }
+        return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+});
+
+// 🔴 [6. app.listen - อยู่บรรทัดสุดท้ายของไฟล์เสมอ]
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    await testConnection();
+});

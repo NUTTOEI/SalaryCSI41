@@ -50,7 +50,7 @@
                             <span>ตกลง / เข้าสู่ระบบ</span>
                             <i class="ti ti-arrow-right"></i>
                         </button>
-                    </form>
+                    </form>..
 
                     <!-- ฟอร์มลงทะเบียนสมาชิกใหม่ -->
                     <form id="register-form" onsubmit="handleRegister(event)" style="display: none;">
@@ -69,18 +69,17 @@
                 </div>
             </div>
 
-            <div class="top-menu-container">
-                <button id="menu-toggle-btn" class="menu-btn" onclick="toggleTopMenu()">
+            <div class="top-menu-container" style="display: block !important;">
+                <button id="menu-toggle-btn" class="menu-btn" onclick="toggleTopMenu()" title="เมนู">
                     ☰
                 </button>
 
                 <div id="top-dropdown-menu" class="dropdown-menu hidden">
-                    <a href="#" onclick="triggerUploadProfile()"><i class="ti ti-photo"></i> เปลี่ยนโปรไฟล์</a>
-                    <a href="#" onclick="logoutStudentId()"><i class="ti ti-logout"></i> ออกจากระบบ</a>
-                    <!-- เพิ่มรายการอื่นๆตรงนี้ -->
+                    <a href="#" onclick="triggerUploadProfile(); return false;"><i class="ti ti-photo"></i> เปลี่ยนโปรไฟล์</a>
+                    <a href="#" onclick="logoutStudentId(); return false;"><i class="ti ti-logout"></i> ออกจากระบบ</a>
                 </div>
                 <input type="file" id="profile-file-input" accept="image/*" style="display: none;">
-              </div>
+            </div>
 
             <div id="home-screen" class="hidden">
                 <div class="user-bar">
