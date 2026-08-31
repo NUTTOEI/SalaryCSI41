@@ -1,3 +1,9 @@
+var COLLECTION_MODE = typeof window.COLLECTION_MODE !== 'undefined' ? window.COLLECTION_MODE : 'month';
+var selectedMonths = typeof window.selectedMonths !== 'undefined' ? window.selectedMonths : [];
+var selectedWeeks = typeof window.selectedWeeks !== 'undefined' ? window.selectedWeeks : [];
+var selectedMonthIndex = typeof window.selectedMonthIndex !== 'undefined' ? window.selectedMonthIndex : 0;
+var MEMBERS = typeof window.MEMBERS !== 'undefined' ? window.MEMBERS : [];
+
 function getBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
