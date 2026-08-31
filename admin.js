@@ -181,11 +181,15 @@ function setRatePreview(v) {
 }
 
 async function applyRateToAll() {
+    const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
     try {
         await fetch('/api/admin/members/amount-all', {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: state.ratePreview })
+            body: JSON.stringify({ 
+                amount: state.ratePreview,
+                branch: currentBranch
+            })
         });
         await loadFromStorage();
     } catch (error) {
@@ -193,19 +197,21 @@ async function applyRateToAll() {
     }
 }
 
-async function addMember(name) {
-    const trimmed = name.trim();
-    if (!trimmed) return;
+async function addMember(studentId, name) {
+    const trimmedId = studentId.trim();
+    const trimmedName = name.trim();
+    if (!trimmedId || trimmedName) return;
 
     const branchSelect = document.getElementById("new-branch-select");
-    const selectBranch = branchSelect ? branchSelect.value : "comsci41";
+    const selectBranch = branchSelect ? branchSelect.value : (sessionStorage.getItem("admin_branch") || "comsci41");
 
     try {
         await fetch("/api/admin/members", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
-                name: trimmed, 
+                studentId: trimmedId,
+                name: trimmedName, 
                 amount: state.ratePreview,
                 branch: selectBranch
             })
@@ -445,18 +451,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (applyRateBtn) applyRateBtn.addEventListener("click", applyRateToAll);
 
     if (addBtn && nameInput) {
-        addBtn.addEventListener("click", () => {
-            addMember(nameInput.value);
-            nameInput.value = "";
-            nameInput.focus();
-        });
-        nameInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                addBtn.click();
-            }
-        });
-    }
+    const studentIdInput = document.getElementById("new-studentid-input");
+    addBtn.addEventListener("click", () => {
+        const studentId = studentIdInput ? studentIdInput.value : "";
+        addMember(studentId, nameInput.value);
+        if (studentIdInput) studentIdInput.value = "";
+        nameInput.value = "";
+        nameInput.focus();
+    });
+}
 
     if (exportExcelBtn) exportExcelBtn.addEventListener("click", exportMembersToExcel);
     if (statTargetBtn) statTargetBtn.addEventListener("click", openTargetModal);
@@ -499,13 +502,14 @@ function closeHistoryModal() {
 
 async function loadFromStorage() {
     try {
-        const targetRes = await fetch("/api/settings/target", { cache: "no-store" });
+        const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+        const targetRes = await fetch(`/api/settings/target?branch=${currentBranch}`, { cache: "no-store" });
         if (targetRes.ok) {
             const targetData = await targetRes.json();
             TARGET_AMOUNT = Number(targetData.target) || 4000;
         }
 
-        const branchFilter = document.getElementById("filter-branch-select")?.value;
+        const branchFilter = document.getElementById("filter-branch-select")?.value || currentBranch;
         const url = branchFilter ? `/api/members?branch=${branchFilter}` : "/api/members";
 
         const response = await fetch(url, { cache: "no-store" });
@@ -539,6 +543,7 @@ function closeTargetModal() {
 async function saveTargetAmount() {
     const inputEl = document.getElementById('target-modal-input');
     const targetValue = inputEl ? inputEl.value : null;
+    const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
 
     if (!targetValue || isNaN(Number(targetValue))) {
         alert("กรุณากรอกจำนวนเงินเพื่อตั้งเป้าหมาย");
@@ -552,7 +557,10 @@ async function saveTargetAmount() {
         const response = await fetch('/api/settings/target', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: Number(targetValue) })
+            body: JSON.stringify({ 
+                target: Number(targetValue),
+                branch: currentBranch
+            })
         });
 
         if (response.ok) {

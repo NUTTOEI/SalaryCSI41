@@ -275,7 +275,10 @@ app.post('/api/admin/reset', async (req, res) => {
 /* ------------------------------------------------------------------ */
 app.get('/api/settings/target', async (req, res) => {
     try {
-        const [rows] = await pool.query("SELECT `value` FROM settings WHERE `key` = 'target_amount'");
+        const { branch } = req.query;
+        const key = branch ? `target_amount_${branch}` : 'target_amount';
+
+        const [rows] = await pool.query("SELECT `value` FROM settings WHERE `key` = ?", [key]);
         const targetVal = rows.length ? Number(rows[0].value) : 4000;
         res.json({ target: isNaN(targetVal) ? 4000 : targetVal });
     } catch (err) {
@@ -286,28 +289,38 @@ app.get('/api/settings/target', async (req, res) => {
 
 app.put('/api/settings/target', async (req, res) => {
     try {
-        const target = Number(req.body.target);
-        if (!isFinite(target) || target <= 0) {
+        const { target, barnch } = req.body;
+        const targetNum = Number(target);
+        if (!isFinite(targetNum) || targetNum <= 0) {
             return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
         }
+
+        const key = brnach ? `target_amount_${branch}` : 'target_amount';
         await pool.query(
-            "INSERT INTO settings (`key`, `value`) VALUES ('target_amount', ?) ON DUPLICATE KEY UPDATE `value` = ?",
-            [String(target), String(target)]
+            "INSERT INTO setting (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
+            [key, String(targetNum), String(targetNum)]
         );
-        res.json({ status: 'success', target });
+        res.json({ status: 'success', target: targetNum });
     } catch (err) {
-        console.error('PUT /api/settings/target error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
+        console.error('PUT /api/setting/target error:', err);
+        res.status(500),json({ status: 'error', message: err.message });
     }
 });
 
 app.put('/api/admin/members/amount-all', async (req, res) => {
     try {
-        const rate = Number(req.body.amount);
+        const { amount, branch } = req.body;
+        const rate = Number(amount);
         if (!isFinite(rate) || rate < 0) {
             return res.status(400).json({ status: 'error', message: 'ยอดเงินไม่ถูกต้อง' });
         }
-        await pool.query('UPDATE members SET amount = ?', [rate]);
+        
+        if (branch) {
+            await pool.query('UPDATE members SET amount = ? WHERE branch = ?', [rate, branch]);
+        } else {
+            await pool.query('UPDATE members SET amount = ?', [rate]);
+        }
+
         res.json({ status: 'success' });
     } catch (err) {
         console.error('PUT /api/admin/members/amount-all error:', err);
