@@ -214,26 +214,34 @@ app.post('/api/admin/toggle-paid', async (req, res) => {
         }
 
         const member = rows[0];
-        let paidHistory = {};
-        try {
-            paidHistory = typeof member.paid_history === 'string' 
-                ? JSON.parse(member.paid_history || '{}') 
-                : (member.paid_history || {});
-        } catch (e) {
-            paidHistory = {};
-        }
+        
+        // แปลงข้อมูล Array เดิมจาก DB
+        let paidMonths = typeof member.paid_months === 'string' 
+            ? JSON.parse(member.paid_months) 
+            : (member.paid_months || DEFAULT_MONTHS());
+            
+        let paidWeeks = typeof member.paid_weeks === 'string' 
+            ? JSON.parse(member.paid_weeks) 
+            : (member.paid_weeks || DEFAULT_WEEKS());
 
+        // สลับสถานะ (Toggle) ตามโหมดที่ส่งมา
         if (mode === 'month') {
-            const key = `m_${monthIndex}`;
-            paidHistory[key] = !paidHistory[key];
+            if (monthIndex >= 0 && monthIndex < paidMonths.length) {
+                paidMonths[monthIndex] = !paidMonths[monthIndex];
+            }
         } else if (mode === 'week') {
-            const key = `w_${monthIndex}_${weekIndex}`;
-            paidHistory[key] = !paidHistory[key];
+            if (weekIndex >= 0 && weekIndex < paidWeeks.length) {
+                paidWeeks[weekIndex] = !paidWeeks[weekIndex];
+            }
         }
 
-        await conn.query('UPDATE members SET paid_history = ? WHERE id = ?', [JSON.stringify(paidHistory), memberId]);
+        // อัปเดต Array กลับลง MySQL
+        await conn.query(
+            'UPDATE members SET paid_months = ?, paid_weeks = ? WHERE id = ?',
+            [JSON.stringify(paidMonths), JSON.stringify(paidWeeks), memberId]
+        );
 
-        res.json({ status: 'success', paidHistory });
+        res.json({ status: 'success', paidMonths, paidWeeks });
     } catch (err) {
         console.error('POST /api/admin/toggle-paid error:', err);
         res.status(500).json({ status: 'error', message: err.message });
@@ -401,6 +409,43 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         }
 
         await pool.query('INSERT INTO processed_slips (trans_ref) VALUES (?)', [transRef]);
+
+        const studentId = req.body.student_id || req.body.studentId || req.body.member_id;
+        const monthIndex = req.body.month_index !== undefined ? parseInt(req.body.month_index) : new Date().getMonth();
+
+        if (studentId) {
+            const [mRows] = await pool.query(
+                'SELECT * FROM members WHERE student_id = ? OR id = ?',
+                [studentId, studentId]
+            );
+
+            if (mRows.length > 0) {
+                const member = mRows[0];
+                let paidMonths = typeof member.paid_months === 'string'
+                    ? JSON.parse(member.paid_months)
+                    : (member.paid_months || DEFAULT_MONTHS());
+
+                let history = typeof member.history === 'string'
+                    ? JSON.parse(member.history)
+                    : (member.history || []);
+
+                    if (monthIndex >= 0 && monthIndex < paidMonths.length) {
+                        paidMonths[monthIndex] = true;
+                    }
+
+                    history.push({
+                        date: new Date().toISOString().slice(0, 10),
+                        amount: expectedAmount,
+                        method: 'โอนเงิน (สแกนสลิป)',
+                        transRef: transRef
+                    });
+
+                    await pool.query(
+                        'UPDATE members SET paid_months = ?, history = ? WHERE id = ?',
+                        [JSON.stringify(paidMonths), JSON.stringify(history), member.id]
+                    );
+                }
+             }
 
         const messageText =
             `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n` +
