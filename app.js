@@ -96,20 +96,23 @@ app.get('/api/members', async (req, res) => {
         const { branch, studentId } = req.query;
 
         if (studentId) {
-            const [rows] = await pool.query("SELECT * FROM members WHERE student_id = ?", [studentId]);
-            const members = rows.map(rowToMember);
-            return res.json(members);
+            const [userRows] = await pool.query("SELECT branch FROM members WHERE student_id = ?", [studentId]);
+            if (userRows.length > 0) {
+                const userBranch = userRows[0].branch;
+                const [rows] = await pool.query("SELECT * FROM members WHERE branch = ?",[userBranch]);
+                return res.json(rows.map(rowToMember));
+            } else {
+                return res.json([]);
+            }
         }
 
         if (branch) {
             const [rows] = await pool.query("SELECT * FROM members WHERE branch = ?", [branch]);
-            const members = rows.map(rowToMember);
-            return res.json(members);
+            return res.json(rows.map(rowToMember));
         }
 
         const [rows] = await pool.query("SELECT * FROM members");
-        const members = rows.map(rowToMember);
-        res.json(members);
+        res.json(rows.map(rowToMember));
 
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
