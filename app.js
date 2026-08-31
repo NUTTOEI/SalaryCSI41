@@ -12,25 +12,6 @@ const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
-// ✅ แก้ไข: เรียกใช้ Cloudinary v2 เพื่อความเสถียรและความเข้ากันได้กับ Storage Engine
-const cloudinary = require('cloudinary').v2;
-const multerCloudinary = require('multer-storage-cloudinary');
-const CloudinaryStorage = multerCloudinary.CloudinaryStorage || multerCloudinary;
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-const avatarStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'fund_avatars',
-        allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-        transformation: [{ width: 500, height: 500, crop: 'limit' }]
-    },
-});
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -46,6 +27,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 const upload = multer({ storage: multer.memoryStorage() });
+const processedSlips = new Set();
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const LINE_TARGET_IDS = [
@@ -68,7 +50,6 @@ function rowToMember(row) {
 
     return {
         id: row.id,
-        studentId: row.student_id,
         branch: row.branch,
         name: row.name,
         amount: Number(row.amount),
@@ -76,7 +57,6 @@ function rowToMember(row) {
         paidWeeks,
         history,
         paid: Array.isArray(paidMonths) && paidMonths.every(Boolean),
-        profile_img: row.profile_img || row.profileImg || null
     };
 }
 
@@ -86,24 +66,18 @@ function rowToMember(row) {
 
 app.get('/api/members', async (req, res) => {
     try {
-        const { branch, studentId } = req.query;
-
-        if (studentId) {
-            const [rows] = await pool.query("SELECT * FROM members WHERE student_id = ?", [studentId]);
-            const members = rows.map(rowToMember);
-            return res.json(members);
-        }
+        const { branch } = req.query;
+        let sql = "SELECT * FROM members";
+        let params = [];
 
         if (branch) {
-            const [rows] = await pool.query("SELECT * FROM members WHERE branch = ?", [branch]);
-            const members = rows.map(rowToMember);
-            return res.json(members);
+            sql += " WHERE branch = ?";
+            params.push(branch);
         }
 
-        const [rows] = await pool.query("SELECT * FROM members");
+        const [rows] = await pool.query(sql, params);
         const members = rows.map(rowToMember);
         res.json(members);
-
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
     }
@@ -140,35 +114,17 @@ app.put('/api/members/:id', async (req, res) => {
 
 app.post('/api/admin/members', async (req, res) => {
     try {
-        const { studentId, name, amount, branch } = req.body;
-
-        if (!studentId || !String(studentId).trim()) {
-            return res.status(400).json({ status: 'error', message: 'กรุณาระบุรหัสนักศึกษา' });
-        }
-
+        const { name, amount, branch } = req.body;
         if (!name || !String(name).trim()) {
             return res.status(400).json({ status: 'error', message: 'กรุณาระบุชื่อ' });
         }
-
-        if (!branch || !String(branch).trim()) {
-            return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา (branch)' });
-        }
-
         const rate = Number(amount) || 100;
-        const cleanBranch = String(branch).trim().toUpperCase();
+        const memberBranch = branch || 'comsci41';
 
         const [result] = await pool.query(
-            `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-                String(studentId).trim(),
-                cleanBranch, 
-                String(name).trim(), 
-                rate, 
-                JSON.stringify(DEFAULT_MONTHS()), 
-                JSON.stringify(DEFAULT_WEEKS()), 
-                JSON.stringify([])
-            ]
+            `INSERT INTO members (branch, name, amount, paid_months, paid_weeks, history)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [memberBranch, String(name).trim(), rate, JSON.stringify(DEFAULT_MONTHS()), JSON.stringify(DEFAULT_WEEKS()), JSON.stringify([])]
         );
         const [rows] = await pool.query('SELECT * FROM members WHERE id = ?', [result.insertId]);
         res.json({ status: 'success', member: rowToMember(rows[0]) });
@@ -203,50 +159,57 @@ app.put('/api/admin/members/:id/amount', async (req, res) => {
 });
 
 app.post('/api/admin/toggle-paid', async (req, res) => {
-    let conn;
+    const conn = await pool.getConnection();
     try {
-        conn = await pool.getConnection();
         const { memberId, mode, monthIndex, weekIndex } = req.body;
-
         const [rows] = await conn.query('SELECT * FROM members WHERE id = ? FOR UPDATE', [memberId]);
         if (rows.length === 0) {
+            conn.release();
             return res.status(404).json({ status: 'error', message: 'ไม่พบสมาชิก' });
         }
-
         const member = rows[0];
-        
-        // แปลงข้อมูล Array เดิมจาก DB
-        let paidMonths = typeof member.paid_months === 'string' 
-            ? JSON.parse(member.paid_months) 
-            : (member.paid_months || DEFAULT_MONTHS());
-            
-        let paidWeeks = typeof member.paid_weeks === 'string' 
-            ? JSON.parse(member.paid_weeks) 
-            : (member.paid_weeks || DEFAULT_WEEKS());
+        const rate = Number(member.amount) || 100;
+        const history = Array.isArray(member.history) ? member.history : (typeof member.history === 'string' ? JSON.parse(member.history) : []);
+        const nowDate = new Date().toLocaleDateString('th-TH');
 
-        // สลับสถานะ (Toggle) ตามโหมดที่ส่งมา
-        if (mode === 'month') {
-            if (monthIndex >= 0 && monthIndex < paidMonths.length) {
-                paidMonths[monthIndex] = !paidMonths[monthIndex];
-            }
-        } else if (mode === 'week') {
-            if (weekIndex >= 0 && weekIndex < paidWeeks.length) {
-                paidWeeks[weekIndex] = !paidWeeks[weekIndex];
-            }
+        if (mode === 'week') {
+            const rawWeeks = member.paid_weeks;
+            const paidWeeks = Array.isArray(rawWeeks) ? rawWeeks.slice() : (typeof rawWeeks === 'string' ? JSON.parse(rawWeeks) : DEFAULT_WEEKS());
+            const newStatus = !Boolean(paidWeeks[weekIndex]);
+            paidWeeks[weekIndex] = newStatus;
+            history.push({
+                date: nowDate,
+                method: newStatus ? 'Admin บันทึกชำระเงิน' : 'Admin ยกเลิกการชำระ',
+                amount: newStatus ? rate : -rate,
+                weeks: [weekIndex],
+            });
+            await conn.query(
+                'UPDATE members SET paid_weeks = ?, history = ? WHERE id = ?',
+                [JSON.stringify(paidWeeks), JSON.stringify(history), memberId]
+            );
+        } else {
+            const rawMonths = member.paid_months;
+            const paidMonths = Array.isArray(rawMonths) ? rawMonths.slice() : (typeof rawMonths === 'string' ? JSON.parse(rawMonths) : DEFAULT_MONTHS());
+            const newStatus = !Boolean(paidMonths[monthIndex]);
+            paidMonths[monthIndex] = newStatus;
+            history.push({
+                date: nowDate,
+                method: newStatus ? 'Admin บันทึกชำระเงิน' : 'Admin ยกเลิกการชำระ',
+                amount: newStatus ? rate : -rate,
+                months: [monthIndex],
+            });
+            await conn.query(
+                'UPDATE members SET paid_months = ?, history = ? WHERE id = ?',
+                [JSON.stringify(paidMonths), JSON.stringify(history), memberId]
+            );
         }
 
-        // อัปเดต Array กลับลง MySQL
-        await conn.query(
-            'UPDATE members SET paid_months = ?, paid_weeks = ? WHERE id = ?',
-            [JSON.stringify(paidMonths), JSON.stringify(paidWeeks), memberId]
-        );
-
-        res.json({ status: 'success', paidMonths, paidWeeks });
+        conn.release();
+        res.json({ status: 'success' });
     } catch (err) {
+        conn.release();
         console.error('POST /api/admin/toggle-paid error:', err);
         res.status(500).json({ status: 'error', message: err.message });
-    } finally {
-        if (conn) conn.release();
     }
 });
 
@@ -266,61 +229,41 @@ app.post('/api/admin/reset', async (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API: เป้าหมายเก็บเงิน                                                */
 /* ------------------------------------------------------------------ */
-app.put('/api/settings/target', async (req, res) => {
-    try {
-        const { target, branch } = req.body; 
-        const targetNum = Number(target);
-        if (!isFinite(targetNum) || targetNum <= 0) {
-            return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
-        }
-
-        const key = branch ? `target_amount_${branch}` : 'target_amount';
-        await pool.query(
-            "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?", 
-            [key, String(targetNum), String(targetNum)]
-        );
-        res.json({ status: 'success', target: targetNum });
-    } catch (err) {
-        console.error('PUT /api/settings/target error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
 app.get('/api/settings/target', async (req, res) => {
     try {
-        const { branch } = req.query;
-        let query = 'SELECT * FROM settings';
-        let params = [];
-
-        if (branch) {
-            query += ' WHERE branch_code = ?';
-            params.push(branch);
-        }
-
-        query += ' ORDER BY updated_at DESC'; 
-
-        const [rows] = await pool.query(query, params);
-        res.json({ status: 'success', data: rows });
+        const [rows] = await pool.query("SELECT `value` FROM settings WHERE `key` = 'target_amount'");
+        const targetVal = rows.length ? Number(rows[0].value) : 4000;
+        res.json({ target: isNaN(targetVal) ? 4000 : targetVal });
     } catch (err) {
         console.error('GET /api/settings/target error:', err);
         res.status(500).json({ status: 'error', message: err.message });
     }
 });
 
+app.put('/api/settings/target', async (req, res) => {
+    try {
+        const target = Number(req.body.target);
+        if (!isFinite(target) || target <= 0) {
+            return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
+        }
+        await pool.query(
+            "INSERT INTO settings (`key`, `value`) VALUES ('target_amount', ?) ON DUPLICATE KEY UPDATE `value` = ?",
+            [String(target), String(target)]
+        );
+        res.json({ status: 'success', target });
+    } catch (err) {
+        console.error('PUT /api/settings/target error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
 app.put('/api/admin/members/amount-all', async (req, res) => {
     try {
-        const { amount, branch } = req.body;
-        const rate = Number(amount);
+        const rate = Number(req.body.amount);
         if (!isFinite(rate) || rate < 0) {
             return res.status(400).json({ status: 'error', message: 'ยอดเงินไม่ถูกต้อง' });
         }
-        
-        if (branch) {
-            await pool.query('UPDATE members SET amount = ? WHERE branch = ?', [rate, branch]);
-        } else {
-            await pool.query('UPDATE members SET amount = ?', [rate]);
-        }
-
+        await pool.query('UPDATE members SET amount = ?', [rate]);
         res.json({ status: 'success' });
     } catch (err) {
         console.error('PUT /api/admin/members/amount-all error:', err);
@@ -383,22 +326,20 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         }
 
         const receiverName = slipData.receiver?.name || '';
-        const userBranch = req.body.branch;
-        let expectedReceiverName = "Natthawat";
+        const receiverUpper = receiverName.toUpperCase();
 
-        if (userBranch) {
-            const [bRows] = await pool.query("SELECT promptpay_name FROM branches WHERE branch_code = ?", [userBranch]);
-            if (bRows.length > 0 && bRows[0].promptpay_name) {
-                expectedReceiverName = bRows[0].promptpay_name;
-            }
-        }
+        const ALLOWED_RECEIVERS = [
+            "สุพรรณณิกา", "คงคาศรี", "SUPHANNIKA", "KHONGKASRI"
+        ];
 
-        const isReceiverValid = receiverName.toLowerCase().includes(expectedReceiverName.toLowerCase());
+        const isReceiverValid = ALLOWED_RECEIVERS.some(keyword => 
+            keyword.trim() !== '' && receiverUpper.includes(keyword.toUpperCase())
+        );
 
         if (!isReceiverValid) {
             return res.status(400).json({
                 status: 'fail',
-                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName} (บัญชีสาขานี้คือ: ${expectedReceiverName})`
+                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
             });
         }
 
@@ -410,47 +351,10 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         await pool.query('INSERT INTO processed_slips (trans_ref) VALUES (?)', [transRef]);
 
-        const studentId = req.body.student_id || req.body.studentId || req.body.member_id;
-        const monthIndex = req.body.month_index !== undefined ? parseInt(req.body.month_index) : new Date().getMonth();
-
-        if (studentId) {
-            const [mRows] = await pool.query(
-                'SELECT * FROM members WHERE student_id = ? OR id = ?',
-                [studentId, studentId]
-            );
-
-            if (mRows.length > 0) {
-                const member = mRows[0];
-                let paidMonths = typeof member.paid_months === 'string'
-                    ? JSON.parse(member.paid_months)
-                    : (member.paid_months || DEFAULT_MONTHS());
-
-                let history = typeof member.history === 'string'
-                    ? JSON.parse(member.history)
-                    : (member.history || []);
-
-                    if (monthIndex >= 0 && monthIndex < paidMonths.length) {
-                        paidMonths[monthIndex] = true;
-                    }
-
-                    history.push({
-                        date: new Date().toISOString().slice(0, 10),
-                        amount: expectedAmount,
-                        method: 'โอนเงิน (สแกนสลิป)',
-                        transRef: transRef
-                    });
-
-                    await pool.query(
-                        'UPDATE members SET paid_months = ?, history = ? WHERE id = ?',
-                        [JSON.stringify(paidMonths), JSON.stringify(history), member.id]
-                    );
-                }
-             }
-
         const messageText =
             `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n` +
             `🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n` +
-            `👤 ผู้รับ: ${receiverName || 'ไม่ระบุ'}\n` +
+            `👤 ผู้รับ: ${slipData.receiver?.name || 'ไม่ระบุ'}\n` +
             `💰 ยอดเงิน: ${slipData.amount} บาท\n` +
             `📄 เลขที่รายการ: ${transRef}\n` +
             `⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
@@ -486,12 +390,30 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* API: รูปโปรไฟล์สาขา และ รูปโปรไฟล์สมาชิก                              */
+/* API: รูปโปรไฟล์สาขา                                                 */
 /* ------------------------------------------------------------------ */
+const branchStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `avatar-${uniqueSuffix}${ext}`);
+    }
+});
 
-const uploadAvatar = multer({
-   storage: avatarStorage,
-   limits: { fileSize: 2 * 1024 * 1024 }
+
+const uploadBranchAvatar = multer({
+    storage: branchStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // ไม่เกิน 2MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น'));
+        }
+    }
 });
 
 app.get('/api/branch/profile', async (req, res) => {
@@ -512,7 +434,7 @@ app.get('/api/branch/profile', async (req, res) => {
     }
 });
 
-app.post('/api/admin/branch/upload-profile', uploadAvatar.single('avatar'), async (req, res) => {
+app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar'), async (req, res) => {
     try {
         const branch = req.body.branch;
 
@@ -524,7 +446,7 @@ app.post('/api/admin/branch/upload-profile', uploadAvatar.single('avatar'), asyn
             return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
         }
 
-        const avatarUrl = req.file.path || req.file.secure_url;
+        const avatarUrl = `/uploads/${req.file.filename}`;
 
         await pool.query(
             "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
@@ -542,74 +464,60 @@ app.post('/api/admin/branch/upload-profile', uploadAvatar.single('avatar'), asyn
     }
 });
 
-app.post('/api/member/upload-profile', uploadAvatar.single('avatar'), async (req, res) => {
-    try {
-        const { memberId } = req.body;
-        if (!memberId) {
-            return res.status(400).json({ success: false, message: 'กรุณาระบุ ID สมาชิก' });
-        }
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
-        }
-
-        const avatarUrl = req.file.path || req.file.secure_url || req.file.url;
-
-        if (!avatarUrl) {
-            return res.status(500).json({ success: false, message: 'ไม่สามารถดึง URL จาก Cloudinary ได้' });
-        }
-
-        const [result] = await pool.query(
-            "UPDATE members SET profile_img = ? WHERE id = ? OR student_id = ?",
-            [avatarUrl, memberId, memberId]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษาในระบบ' });
-        }
-
-        res.json({
-            success: true,
-            message: 'อัปเดทรูปโปรไฟล์สำเร็จ',
-            profileImg: avatarUrl
-        });
-    } catch (error) {
-        console.error('Member Avatar Upload Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
-    }
+/* ------------------------------------------------------------------ */
+/* หน้าแรก + Webhook + start server                                    */
+/* ------------------------------------------------------------------ */
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'member.html'));
 });
+
+app.post('/webhook', (req, res) => {
+    const events = req.body.events || [];
+    events.forEach(event => {
+        if (event.source && event.source.userId) {
+            console.log('====================================');
+            console.log('User ID ของคนที่ทักมา:', event.source.userId);
+            console.log('====================================');
+        }
+    });
+    res.sendStatus(200);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    await testConnection();
+});
+
 
 /* ------------------------------------------------------------------ */
 /* API: สมัครสมาชิก และ เข้าสู่ระบบแอดมิน                                 */
 /* ------------------------------------------------------------------ */
 
+// 1. API ลงทะเบียนแอดมินใหม่ (เก็บเข้า MySQL)
 app.post('/api/admin/register', async (req, res) => {
     try {
         const { studentId, name, branch } = req.body;
-        
         if (!studentId || !name || !branch) {
             return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
         }
 
-        const cleanBranch = String(branch).trim().toUpperCase();
-        const cleanStudentId = String(studentId).trim();
-
-        const [existing] = await pool.query('SELECT id FROM admins WHERE student_id = ?', [cleanStudentId]);
-        if (existing.length > 0) {
-            return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้ถูกลงทะเบียนแอดมินแล้ว' });
-        }
-
         await pool.query(
-            'INSERT INTO admins (student_id, name, branch) VALUES (?, ?, ?)',
-            [cleanStudentId, name.trim(), cleanBranch]
+            "INSERT INTO admins (student_id, name, branch) VALUES (?, ?, ?)",
+            [studentId.trim(), name.trim(), branch.trim()]
         );
 
-        res.json({ success: true, message: 'ลงทะเบียนผู้ดูแลระบบสำเร็จ' });
-    } catch (error) {
-        console.error('Admin registration error:', error);
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลงทะเบียน' });
+        res.json({ success: true, message: 'ลงทะเบียนแอดมินสำเร็จ' });
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้เคยลงทะเบียนไว้แล้ว' });
+        }
+        console.error('Register Admin Error:', err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
+// 2. API ตรวจสอบรหัสนักศึกษาเพื่อเข้าสู่ระบบ
 app.post('/api/admin/login', async (req, res) => {
     try {
         const { studentId } = req.body;
@@ -634,184 +542,4 @@ app.post('/api/admin/login', async (req, res) => {
         console.error('Login Admin Error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
-});
-
-/* ------------------------------------------------------------------ */
-/* API: สำหรับสมาชิกลงทะเบียน และ เข้าสู่ระบบ                             */
-/* ------------------------------------------------------------------ */
-
-app.post('/api/member/register', async (req, res) => {
-    try {
-        const { studentId, name, branch } = req.body;
-
-        if (!studentId || !String(studentId).trim()) {
-            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' });
-        }
-        if (!name || !String(name).trim()) {
-            return res.status(400).json({ success: false, message: 'กรุณากรอกชื่อ-นามสกุล' });
-        }
-        if (!branch || !String(branch).trim()) {
-            return res.status(400).json({ success: false, message: 'กรุณากรอกสาขา / หรือตัวย่อสาขา (เช่น BWBS)' });
-        }
-
-        const cleanStudentId = String(studentId).trim();
-        const cleanName = String(name).trim();
-        const cleanBranch = String(branch).trim().toUpperCase();
-
-        const [existingBranch] = await pool.query("SELECT * FROM branches WHERE branch_code = ?", [cleanBranch]);
-        if (existingBranch.length === 0) {
-            await pool.query(
-                "INSERT INTO branches (branch_code, branch_name, profile_img) VALUES (?, ?, ?)",
-                [cleanBranch, cleanBranch, `${cleanBranch}.png`]
-            );
-        }
-
-        const [existing] = await pool.query("SELECT id FROM members WHERE student_id = ?", [cleanStudentId]);
-        if (existing.length > 0) {
-            return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้ถูกลงทะเบียนไว้แล้ว' });
-        }
-
-        const defaultAmount = 100;
-        await pool.query(
-            `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-                cleanStudentId,
-                cleanBranch,
-                cleanName,
-                defaultAmount,
-                JSON.stringify(DEFAULT_MONTHS()),
-                JSON.stringify(DEFAULT_WEEKS()),
-                JSON.stringify([])
-            ]
-        );
-
-        res.json({
-            success: true,
-            message: 'ลงทะเบียนสำเร็จ สามารถเข้าสู่ระบบได้ทันที',
-            member: { studentId: cleanStudentId, name: cleanName, branch: cleanBranch }
-        });
-    } catch (err) {
-        console.error('Register Member Error:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-app.post('/api/member/login', async (req, res) => {
-    try {
-        const { studentId } = req.body;
-        if (!studentId || !studentId.trim()) {
-            return res.status(400).json({ success: false, message: 'กรุณากรอกรหัสนักศึกษา' });
-        }
-
-        const [rows] = await pool.query(
-            "SELECT id, student_id, branch, name FROM members WHERE student_id = ?",
-            [studentId.trim()]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ กรุณาลงทะเบียนก่อน!!!!' });
-        }
-
-        const member = rows[0];
-        res.json({
-            success: true,
-            id: member.id,
-            studentId: member.student_id,
-            branch: member.branch,
-            name: member.name
-        });
-    } catch (err) {
-        console.error('Member Login Error:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-/* ------------------------------------------------------------------ */
-/* API: ตั้งค่า PromptPay                                              */
-/* ------------------------------------------------------------------ */
-
-app.put('/api/settings/promptpay', async (req, res) => {
-    try {
-        const { branch, promptpayId, promptpayName } = req.body;
-        if (!branch) {
-            return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
-        }
-        
-        const cleanBranch = String(branch).trim().toUpperCase();
-
-        await pool.query(
-            `INSERT INTO branches (branch_code, branch_name, promptpay_id, promptpay_name)
-             VALUES (?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE promptpay_id = VALUES(promptpay_id), promptpay_name = VALUES(promptpay_name)`,
-            [cleanBranch, cleanBranch, promptpayId, promptpayName]
-        );
-
-        res.json({ status: 'success', message: 'บันทึกพร้อมเพย์ประจำสาขาสำเร็จ' });
-    } catch (err) {
-        console.error('PUT /api/settings/promptpay error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
-app.get('/api/settings/promptpay', async (req, res) => {
-    try {
-        const { branch } = req.query;
-        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
-
-        const [rows] = await pool.query(
-            "SELECT promptpay_id, promptpay_name FROM branches WHERE branch_code = ?",
-            [branch]
-        );
-
-        if (rows.length > 0) {
-            res.json({
-                promptpayId: rows[0].promptpay_id,
-                promptpayName: rows[0].promptpay_name
-            });
-        } else {
-            res.json({});
-        }
-    } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
-/* ------------------------------------------------------------------ */
-/* หน้าแรก + Webhook + Error Handling                                 */
-/* ------------------------------------------------------------------ */
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'member.html'));
-});
-
-app.post('/webhook', (req, res) => {
-    const events = req.body.events || [];
-    events.forEach(event => {
-        if (event.source && event.source.userId) {
-            console.log('====================================');
-            console.log('User ID ของคนที่ทักมา:', event.source.userId);
-            console.log('====================================');
-        }
-    });
-    res.sendStatus(200);
-});
-
-app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
-        }
-        return res.status(400).json({ success: false, message: err.message });
-    } else if (err) {
-        return res.status(400).json({ success: false, message: err.message });
-    }
-    next();
-});
-
-// ✅ แก้ไข: ย้าย app.listen มาไว้ล่างสุดของไฟล์ หลังจากประกาศ API Routes ทั้งหมดแล้ว
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    await testConnection();
 });
