@@ -273,31 +273,17 @@ app.post('/api/admin/reset', async (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API: เป้าหมายเก็บเงิน                                                */
 /* ------------------------------------------------------------------ */
-app.get('/api/settings/target', async (req, res) => {
-    try {
-        const { branch } = req.query;
-        const key = branch ? `target_amount_${branch}` : 'target_amount';
-
-        const [rows] = await pool.query("SELECT `value` FROM settings WHERE `key` = ?", [key]);
-        const targetVal = rows.length ? Number(rows[0].value) : 4000;
-        res.json({ target: isNaN(targetVal) ? 4000 : targetVal });
-    } catch (err) {
-        console.error('GET /api/settings/target error:', err);
-        res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
 app.put('/api/settings/target', async (req, res) => {
     try {
-        const { target, branch } = req.body;
+        const { target, branch } = req.body; 
         const targetNum = Number(target);
         if (!isFinite(targetNum) || targetNum <= 0) {
             return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
         }
 
-        const key = brnach ? `target_amount_${branch}` : 'target_amount';
+        const key = branch ? `target_amount_${branch}` : 'target_amount';
         await pool.query(
-            "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?",
+            "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?", 
             [key, String(targetNum), String(targetNum)]
         );
         res.json({ status: 'success', target: targetNum });
@@ -306,6 +292,7 @@ app.put('/api/settings/target', async (req, res) => {
         res.status(500).json({ status: 'error', message: err.message });
     }
 });
+
 
 app.put('/api/admin/members/amount-all', async (req, res) => {
     try {
@@ -383,20 +370,23 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         }
 
         const receiverName = slipData.receiver?.name || '';
-        const receiverUpper = receiverName.toUpperCase();
+        const userBranch = req.body.branch;
+        let expectedReceiverName = "สุพรรณณิกา";
 
-        const ALLOWED_RECEIVERS = [
-            "สุพรรณณิกา", "คงคาศรี", "SUPHANNIKA", "KHONGKASRI"
-        ];
+        if (userBranch) {
+            const [bRows] = await pool.query("SELECT promptpay_name FROM branches WHERE branch_code = ?", [userBranch]);
+            if (bRows.length > 0 && bRows[0].promptpay_name) {
+                expectedReceiverName = bRows[0].promptpay_name;
+            }
+        }
 
-        const isReceiverValid = ALLOWED_RECEIVERS.some(keyword => 
-            keyword.trim() !== '' && receiverUpper.includes(keyword.toUpperCase())
-        );
+        // ตรวจสอบชื่อบัญชีผู้รับเงิน
+        const isReceiverValid = receiverName.toLowerCase().includes(expectedReceiverName.toLowerCase());
 
         if (!isReceiverValid) {
             return res.status(400).json({
                 status: 'fail',
-                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}`
+                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName} (บัญชีสาขานี้คือ: ${expectedReceiverName})`
             });
         }
 
@@ -411,7 +401,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const messageText =
             `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n` +
             `🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n` +
-            `👤 ผู้รับ: ${slipData.receiver?.name || 'ไม่ระบุ'}\n` +
+            `👤 ผู้รับ: ${receiverName || 'ไม่ระบุ'}\n` +
             `💰 ยอดเงิน: ${slipData.amount} บาท\n` +
             `📄 เลขที่รายการ: ${transRef}\n` +
             `⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
@@ -729,4 +719,60 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
+});
+
+app.put('/api/settings/promptpay', async (req, res) => {
+    try {
+        const { branch, promptpayId, promptpayName } = req.body;
+        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
+        
+        await pool.query(
+            "UPDATE branches SET promptpay_id = ?, promptpay_name = ? WHERE branch_code = ?",
+            [promptpayId, promptpayName, branch]
+        );
+
+        res.json({ status: 'success', message: 'บันทึกพร้อมเพย์ประจำสาขาสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+app.get('/api/settings/promptpay', async (req, res) => {
+    try {
+        const { branch } = req.query;
+        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
+
+        const [rows] = await pool.query(
+            "SELECT promptpay_id, promptpay_name FROM branches WHERE branch_code = ?",
+            [branch]
+        );
+
+        if (rows.length > 0) {
+            res.json({
+                promptpayId: rows[0].promptpay_id,
+                promptpayName: rows[0].promptpay_name
+            });
+        } else {
+            res.json({});
+        }
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+
+app.put('/api/setting/promptpay', async (req, res) => {
+    try {
+        const { branch, promptpayId, promptpayName } = req.body;
+        if (!branch) return res.status(400).json({ status: 'error', message: 'กรุณาระบุสาขา' });
+        
+        await pool.query(
+            "UPDATE branches SET promptpay_id = ?, promptpay_name = ? WHERE branch_code = ?",
+            [promptpayId, promptpayName, branch]
+        );
+
+        res.json({ status: 'success', message: 'บันทึกพร้อมเพล์ประจำสาขาสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
 });

@@ -73,3 +73,8 @@ CREATE TABLE IF NOT EXISTS `processed_slips` (
     `trans_ref` VARCHAR(100) PRIMARY KEY,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- เพิ่มคอลัมน์เก็บข้อมูลพร้อมเพย์ประจำสาขา
+ALTER TABLE `branches` 
+ADD COLUMN `promptpay_id` VARCHAR(50) DEFAULT NULL AFTER `profile_img`,
+ADD COLUMN `promptpay_name` VARCHAR(255) DEFAULT NULL AFTER `promptpay_id`;

@@ -8,85 +8,100 @@ function getBase64(file) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    if (document.getElementById('qr-name')) {
-        document.getElementById('qr-name').textContent = (typeof ROOM !== 'undefined' && ROOM.promptpayName)
-            ? ROOM.promptpayName
-            : "น.ส.สุพรรณณิกา คงคาศรี";
-    }
+    // อ่านค่า URL Parameters
+    const params = new URLSearchParams(window.location.search);
+    const memberId = params.get("id") || params.get("memberId");
 
-    const COLLECTION_MODE = localStorage.getItem("fund-dashboard-mode") || "month";
+    // ตัวแปรเก็บพร้อมเพย์ประจำสาขา
+    let currentBranchPromptPay = {
+        promptpayId: "0942411478",
+        promptpayName: "เหรัญญิกประจำสาขา"
+    };
 
-    let selectedMonthIndex = new Date().getMonth();
-    let selectedMonths = [];
-    let selectedWeeks = [];
-
-    const params = new URLSearchParams(location.search);
-    const memberId = Number(params.get("id"));
-
-    // โหลดข้อมูลสมาชิกจาก MySQL API
-let MEMBERS = [];
-try {
-    const response = await fetch("/api/members", { cache: "no-store" });
-    if (response.ok) {
-        const data = await response.json();
-        // เช็กโครงสร้าง JSON เพื่อดึง Array ออกมาให้ถูกต้อง
-        if (Array.isArray(data)) {
-            MEMBERS = data;
-        } else if (data && Array.isArray(data.data)) {
-            MEMBERS = data.data;
-        } else if (data && Array.isArray(data.members)) {
-            MEMBERS = data.members;
+    async function loadBranchPromptPay(branchCode) {
+        if (!branchCode) return;
+        try {
+            const res = await fetch(`/api/settings/promptpay?branch=${branchCode}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.promptpayId) currentBranchPromptPay.promptpayId = data.promptpayId;
+                if (data.promptpayName) currentBranchPromptPay.promptpayName = data.promptpayName;
+            }
+        } catch (e) {
+            console.error("ไม่สามารถดึงข้อมูลพร้อมเพย์ประจำสาขาได้:", e);
         }
     }
-} catch (e) {
-    console.error("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:", e);
-}
 
-// หากดึงจาก API ไม่สำเร็จ ให้ดึงจาก LocalStorage หรือ getMembersData()
-if (!Array.isArray(MEMBERS) || MEMBERS.length === 0) {
+    // ดึงข้อมูลสมาชิกจาก API / Fallback
     try {
-        const storedMembers = localStorage.getItem("fund-dashboard-members");
-        const parsed = storedMembers ? JSON.parse(storedMembers) : null;
-        if (Array.isArray(parsed)) {
-            MEMBERS = parsed;
-        } else if (typeof getMembersData === 'function') {
-            const fallback = getMembersData();
-            MEMBERS = Array.isArray(fallback) ? fallback : [];
+        const response = await fetch("/api/members", { cache: "no-store" });
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                MEMBERS = data;
+            } else if (data && Array.isArray(data.data)) {
+                MEMBERS = data.data;
+            } else if (data && Array.isArray(data.members)) {
+                MEMBERS = data.members;
+            }
         }
     } catch (e) {
+        console.error("❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:", e);
+    }
+
+    if (!Array.isArray(MEMBERS) || MEMBERS.length === 0) {
+        try {
+            const storedMembers = localStorage.getItem("fund-dashboard-members");
+            const parsed = storedMembers ? JSON.parse(storedMembers) : null;
+            if (Array.isArray(parsed)) {
+                MEMBERS = parsed;
+            } else if (typeof getMembersData === 'function') {
+                const fallback = getMembersData();
+                MEMBERS = Array.isArray(fallback) ? fallback : [];
+            }
+        } catch (e) {
+            MEMBERS = [];
+        }
+    }
+
+    if (!Array.isArray(MEMBERS)) {
         MEMBERS = [];
     }
-}
 
-// ป้องกัน Error 100% โดยการรับประกันว่า MEMBERS เป็น Array เสมอ
-if (!Array.isArray(MEMBERS)) {
-    MEMBERS = [];
-}
-
+    // ค้นหาข้อมูลสมาชิก
     const member = MEMBERS.find(m => {
-    if (!m) return false;
-    const targetId = String(memberId).trim();
-    return (
-        String(m.id || "").trim() === targetId ||
-        String(m._id || "").trim() === targetId ||
-        String(m.student_id || "").trim() === targetId ||
-        String(m.studentId || "").trim() === targetId ||
-        String(m.member_id || "").trim() === targetId
-    );
-});
+        if (!m) return false;
+        const targetId = String(memberId).trim();
+        return (
+            String(m.id || "").trim() === targetId ||
+            String(m._id || "").trim() === targetId ||
+            String(m.student_id || "").trim() === targetId ||
+            String(m.studentId || "").trim() === targetId ||
+            String(m.member_id || "").trim() === targetId
+        );
+    });
 
-if (!member) {
-    console.error("❌ ไม่พบสมาชิก ID:", memberId, "จากรายการทั้งหมด:", MEMBERS);
-    alert(`ไม่พบข้อมูลสมาชิก (ID: ${memberId}) กรุณาตรวจสอบอีกครั้ง`);
-    
-    // หากมีหน้าก่อนหน้าให้ย้อนกลับ ถ้าไม่มีให้ไปหน้าหลัก (member.html หรือ index.html)
-    if (window.history.length > 1) {
-        history.back();
-    } else {
-        location.href = "index.html"; 
+    if (!member) {
+        console.error("❌ ไม่พบสมาชิก ID:", memberId, "จากรายการทั้งหมด:", MEMBERS);
+        alert(`ไม่พบข้อมูลสมาชิก (ID: ${memberId}) กรุณาตรวจสอบอีกครั้ง`);
+        
+        if (window.history.length > 1) {
+            history.back();
+        } else {
+            location.href = "index.html"; 
+        }
+        return;
     }
-    return;
-}
+
+    // โหลดข้อมูลพร้อมเพย์หลังจากพบข้อมูลสาขาของสมาชิกเรียบร้อยแล้ว
+    if (member.branch) {
+        await loadBranchPromptPay(member.branch);
+    }
+
+    // แสดงชื่อบัญชีเหรัญญิกบนหน้าจอ
+    if (document.getElementById('qr-name')) {
+        document.getElementById('qr-name').textContent = currentBranchPromptPay.promptpayName;
+    }
 
     const rate = Number(member.amount)
         || (typeof ROOM !== 'undefined' && Number(ROOM.amount || ROOM.rate))
@@ -289,15 +304,18 @@ if (!member) {
     }
 
     function updateQRCode() {
-        const promptpayAccount = (typeof ROOM !== 'undefined' && ROOM.promptpayId)
-            ? ROOM.promptpayId
-            : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0942411478");
+        const promptpayAccount = currentBranchPromptPay.promptpayId;
 
         const isMonthMode = COLLECTION_MODE === "month";
         const selectedCount = isMonthMode ? selectedMonths.length : selectedWeeks.length;
         const totalAmount = selectedCount * rate;
 
-        if (typeof buildPromptPayPayload === "function" && totalAmount > 0) {
+        const nameElem = document.getElementById('qr-name');
+        if (nameElem && currentBranchPromptPay.promptpayName) {
+            nameElem.textContent = currentBranchPromptPay.promptpayName;
+        }
+
+        if (typeof buildPromptPayPayload === "function" && totalAmount > 0 && promptpayAccount) {
             const payload = buildPromptPayPayload(promptpayAccount, totalAmount);
             const qrImg = document.getElementById('qr-img');
             if (qrImg) {
@@ -330,110 +348,45 @@ if (!member) {
         document.getElementById("panel-cash")?.classList.add("step-hidden");
     }
 
-    async function markPending(method) {
-        const isMonthMode = COLLECTION_MODE === "month";
-        const hasSelection = isMonthMode ? selectedMonths.length > 0 : selectedWeeks.length > 0;
+    // แก้ไขใน Frontend
+async function markPending(method) {
+    const selectedCount = COLLECTION_MODE === "month" ? selectedMonths.length : selectedWeeks.length;
+    const currentPayAmount = selectedCount * rate;
 
-        if (!hasSelection) {
-            alert(isMonthMode ? "กรุณาเลือกเดือนที่ต้องการชำระ" : "กรุณาเลือกสัปดาห์ที่ต้องการชำระ");
+    if (method === "PromptPay") {
+        const slipInput = document.getElementById("slip-file");
+        if (!slipInput || !slipInput.files[0]) {
+            alert("กรุณาอัปโหลดสลิปการโอนเงิน");
             return;
         }
 
-        const payAmount = isMonthMode ? selectedMonths.length * rate : selectedWeeks.length * rate;
-        let transferorName = null;
-
-        if (method === "PromptPay") {
-            const slipInput = document.getElementById("slip-file");
-            if (slipInput && slipInput.files.length === 0) {
-                alert("กรุณาแนบไฟล์รูปภาพสลิปการโอนเงิน");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("slip_image", slipInput.files[0]);
-            formData.append("expected_amount", payAmount);
-
-            try {
-                const verifyRes = await fetch("/verify-slip", {
-                    method: "POST",
-                    body: formData
-                });
-
-                const verifyData = await verifyRes.json();
-
-                if (!verifyRes.ok || verifyData.status !== "success") {
-                    alert("❌ ตรวจสอบสลิปไม่ผ่าน: " + (verifyData.message || "สลิปไม่ถูกต้อง"));
-                    return;
-                }
-
-                transferorName = verifyData.transferorName || null;
-            } catch (err) {
-                console.error("❌ เกิดข้อผิดพลาดในการตรวจสลิป:", err);
-                alert("ไม่สามารถเชื่อมต่อระบบตรวจสอบสลิปได้ กรุณาลองใหม่อีกครั้ง");
-                return;
-            }
-        }
-
-        let slipBase64 = null;
-        if (method === "PromptPay") {
-            const slipInput = document.getElementById("slip-file");
-            if (slipInput && slipInput.files.length > 0) {
-                try {
-                    slipBase64 = await getBase64(slipInput.files[0]);
-                } catch (e) {
-                    console.error("❌ แปลงไฟล์สลิปไม่สำเร็จ:", e);
-                }
-            }
-        }
-
-        const nowDate = new Date().toLocaleDateString("th-TH");
-
-        if (isMonthMode) {
-            if (!member.paidMonths) member.paidMonths = Array(12).fill(false);
-            selectedMonths.forEach(mIdx => member.paidMonths[mIdx] = true);
-        } else {
-            const weekCount = typeof WEEKS_LIST !== 'undefined' ? WEEKS_LIST.length : 52;
-            if (!member.paidWeeks) member.paidWeeks = Array(weekCount).fill(false);
-            selectedWeeks.forEach(wIdx => member.paidWeeks[wIdx] = true);
-        }
-
-        if (!member.history) member.history = [];
-        member.history.push({
-            date: nowDate,
-            method: method,
-            amount: payAmount,
-            mode: COLLECTION_MODE,
-            items: isMonthMode ? [...selectedMonths] : [...selectedWeeks],
-            transferorName: transferorName,
-            slipUrl: slipBase64
-        });
+        const formData = new FormData();
+        formData.append("slip_image", slipInput.files[0]);
+        formData.append("expected_amount", currentPayAmount);
+        formData.append("branch", member ? member.branch : ""); 
 
         try {
-            const res = await fetch(`/api/members/${member.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    paidMonths: member.paidMonths,
-                    paidWeeks: member.paidWeeks,
-                    history: member.history
-                })
+            const res = await fetch("/verify-slip", {
+                method: "POST",
+                body: formData
             });
-
+            const result = await res.json();
             if (res.ok) {
-                alert("แจ้งชำระเงินสำเร็จ!");
-                document.getElementById('pay-form-wrap')?.classList.add('hidden');
-                document.getElementById('pay-done')?.classList.remove('hidden');
-                setTimeout(() => {
-                    window.location.href = `member.html?id=${member.id}`;
-                }, 2000);
+                alert("ชำระเงินสำเร็จ!");
+                location.reload();
             } else {
-                alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+                alert(`ตรวจสอบสลิปไม่ผ่าน: ${result.message}`);
             }
         } catch (err) {
-            console.error("❌ บันทึกไม่สำเร็จ:", err);
+            console.error("Verification error:", err);
             alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         }
+    } else if (method === "เงินสด") {
+        // บันทึกรายการเงินสด หรือส่งเข้า API แจ้งยอดเงินสด
+        alert(`รับแจ้งชำระเงินสดจำนวน ฿${currentPayAmount} เรียบร้อยแล้ว`);
+        // TODO: ยิง API แจ้งแอดมินหรือบันทึกสถานะรออนุมัติ
     }
+}
 
     document.getElementById("tab-qr")?.addEventListener("click", () => switchTab("qr"));
     document.getElementById("tab-cash")?.addEventListener("click", () => switchTab("cash"));

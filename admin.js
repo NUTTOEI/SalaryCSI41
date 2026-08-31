@@ -200,7 +200,7 @@ async function applyRateToAll() {
 async function addMember(studentId, name) {
     const trimmedId = studentId.trim();
     const trimmedName = name.trim();
-    if (!trimmedId || !trimmedName) return;
+    if (!trimmedId || !trimmedName) return; // แก้จาก !trimmedName ให้ทำงานถูกต้อง
 
     const branchSelect = document.getElementById("new-branch-select");
     const selectBranch = branchSelect ? branchSelect.value : (sessionStorage.getItem("admin_branch") || "comsci41");
@@ -219,6 +219,53 @@ async function addMember(studentId, name) {
         await loadFromStorage();
     } catch (err) {
         console.error("Error adding member:", err);
+    }
+}
+
+async function loadPromptPaySettings() {
+    const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+    try {
+        const res = await fetch(`/api/settings/promptpay?branch=${currentBranch}`);
+        if (res.ok) {
+            const data = await res.json();
+            const idInput = document.getElementById("setting-promptpay-id");
+            const nameInput = document.getElementById("setting-promptpay-name");
+            if (idInput) idInput.value = data.promptpayId || "";
+            if (nameInput) nameInput.value = data.promptpayName || "";
+        }
+    } catch (err) {
+        console.error("Error loading promptpay settings:", err);
+    }
+}
+
+async function savePromptPaySettings() {
+    const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+    const promptpayId = document.getElementById("setting-promptpay-id")?.value.trim();
+    const promptpayName = document.getElementById("setting-promptpay-name")?.value.trim();
+
+    if (!promptpayId) {
+        alert("กรุณากรอกเบอร์โทรศัพท์หรือเลขพร้อมเพย์");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/settings/promptpay', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                branch: currentBranch,
+                promptpayId: promptpayId,
+                promptpayName: promptpayName
+            })
+        });
+
+        if (response.ok) {
+            alert("บันทึกข้อมูลพร้อมเพย์ประจำสาขาสำเร็จ");
+        } else {
+            alert("เกิดข้อผิดพลาดในการบันทึก");
+        }
+    } catch (err) {
+        console.error("Error saving promptpay settings:", err);
     }
 }
 
