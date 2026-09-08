@@ -54,7 +54,7 @@ app.use('/uploads', express.static(uploadsDir));
 // 🟢 [แก้ไขจุดที่ 1] ตั้งค่า Multer สำหรับรูปสมาชิกให้จำกัด 2MB และรับเฉพาะรูปภาพ
 const uploadMemberAvatar = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // ไม่เกิน 2MB
+    limits: { fileSize: 10 * 1024 * 1024 }, // ไม่เกิน 2MB
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -472,7 +472,7 @@ const branchStorage = multer.diskStorage({
 
 const uploadBranchAvatar = multer({
     storage: branchStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // ไม่เกิน 2MB
+    limits: { fileSize: 10 * 1024 * 1024 }, // ไม่เกิน 2MB
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -688,7 +688,7 @@ app.post('/api/member/upload-profile', (req, res) => {
     uploadMemberAvatar.single('avatar')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 5MB' });
+                return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 10MB' });
             }
             return res.status(400).json({ success: false, message: err.message });
         } else if (err) {
@@ -746,7 +746,7 @@ app.post('/webhook', (req, res) => {
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 5MB' });
+            return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 10MB' });
         }
         return res.status(400).json({ success: false, message: err.message });
     } else if (err) {
