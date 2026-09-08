@@ -23,11 +23,11 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 app.use(express.static(__dirname)); // serve admin.html, member.html, pay.html, css, รูป ฯลฯ
 
-// 🟢 [2. ตั้งค่า Cloudinary - ใส่ API Keys ของคุณที่นี่หรือใน .env]
+// 🟢 [2. ตั้งค่า Cloudinary]
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'YOUR_CLOUD_NAME',
-    api_key: process.env.CLOUDINARY_API_KEY || 'YOUR_API_KEY',
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'YOUR_API_SECRET'
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // 🟢 [3. Helper อัปโหลด Buffer ไป Cloudinary]
@@ -50,6 +50,19 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 app.use('/uploads', express.static(uploadsDir));
+
+// 🟢 [แก้ไขจุดที่ 1] ตั้งค่า Multer สำหรับรูปสมาชิกให้จำกัด 2MB และรับเฉพาะรูปภาพ
+const uploadMemberAvatar = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 }, // ไม่เกิน 2MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (JPG, PNG ฯลฯ)'));
+        }
+    }
+});
 
 const upload = multer({ storage: multer.memoryStorage() });
 const processedSlips = new Set();
@@ -169,7 +182,7 @@ app.post('/api/admin/members', async (req, res) => {
 
         const [result] = await pool.query(
             `INSERT INTO members (student_id, branch, name, amount, paid_months, paid_weeks, history)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 String(studentId).trim(),
                 memberBranch, 
@@ -325,7 +338,6 @@ app.put('/api/admin/members/amount-all', async (req, res) => {
     }
 });
 
-
 /* ------------------------------------------------------------------ */
 /* ระบบตรวจสลิปโอนเงิน + แจ้งเตือน LINE                                */
 /* ------------------------------------------------------------------ */
@@ -336,7 +348,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
-        const apiKey = (process.env.SLIPOK_API_KEY || 'SLIPOKT51XVYS').trim();
+        const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
         const branchId = '73437';
 
         const formData = new FormData();
@@ -457,7 +469,6 @@ const branchStorage = multer.diskStorage({
         cb(null, `avatar-${uniqueSuffix}${ext}`);
     }
 });
-
 
 const uploadBranchAvatar = multer({
     storage: branchStorage,
@@ -672,33 +683,44 @@ app.post('/api/member/login', async (req, res) => {
     }
 });
 
-// 🟢 [4. API อัปโหลดรูปโปรไฟล์สมาชิกเข้า Cloudinary (ย้ายขึ้นมาตรงนี้แล้ว)]
-app.post('/api/member/upload-profile', upload.single('avatar'), async (req, res) => {
-    try {
-        const { memberId } = req.body;
-        if (!memberId) {
-            return res.status(400).json({ success: false, message: 'กรุณาระบุ ID สมาชิก' });
+// 🟢 [4. API อัปโหลดรูปโปรไฟล์สมาชิกเข้า Cloudinary - แก้ไขการเรียกใช้งาน Multer Callback]
+app.post('/api/member/upload-profile', (req, res) => {
+    uploadMemberAvatar.single('avatar')(req, res, async (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ success: false, message: 'ขนาดไฟล์รูปภาพต้องไม่เกิน 2MB' });
+            }
+            return res.status(400).json({ success: false, message: err.message });
+        } else if (err) {
+            return res.status(400).json({ success: false, message: err.message });
         }
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
+
+        try {
+            const { memberId } = req.body;
+            if (!memberId) {
+                return res.status(400).json({ success: false, message: 'กรุณาระบุ ID สมาชิก' });
+            }
+            if (!req.file) {
+                return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
+            }
+
+            // อัปโหลดขึ้น Cloudinary
+            const result = await uploadToCloudinary(req.file.buffer);
+            const avatarUrl = result.secure_url;
+
+            // อัปเดต URL รูปภาพลงใน MySQL
+            await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
+
+            return res.json({
+                success: true,
+                message: 'อัปเดทรูปโปรไฟล์สำเร็จ',
+                profileImg: avatarUrl
+            });
+        } catch (error) {
+            console.error('Member Avatar Upload Error:', error);
+            return res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
         }
-
-        // อัปโหลดขึ้น Cloudinary
-        const result = await uploadToCloudinary(req.file.buffer);
-        const avatarUrl = result.secure_url;
-
-        // อัปเดต URL รูปภาพลงใน MySQL
-        await pool.query("UPDATE members SET profile_img = ? WHERE id = ?", [avatarUrl, memberId]);
-
-        res.json({
-            success: true,
-            message: 'อัปเดทรูปโปรไฟล์สำเร็จ',
-            profileImg: avatarUrl
-        });
-    } catch (error) {
-        console.error('Member Avatar Upload Error:', error);
-        res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการอัปโหลด' });
-    }
+    });
 });
 
 /* ------------------------------------------------------------------ */
@@ -720,7 +742,7 @@ app.post('/webhook', (req, res) => {
     res.sendStatus(200);
 });
 
-// 🔴 [5. Error Middleware - อยู่ท้ายสุดก่อน app.listen]
+// 🔴 [5. Error Middleware]
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -733,7 +755,7 @@ app.use((err, req, res, next) => {
     next();
 });
 
-// 🔴 [6. app.listen - อยู่บรรทัดสุดท้ายของไฟล์เสมอ]
+// 🔴 [6. app.listen]
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
