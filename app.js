@@ -54,7 +54,7 @@ app.use('/uploads', express.static(uploadsDir));
 // 🟢 [แก้ไขจุดที่ 1] ตั้งค่า Multer สำหรับรูปสมาชิกให้จำกัด 2MB และรับเฉพาะรูปภาพ
 const uploadMemberAvatar = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 2 * 1024 * 1024 }, // ไม่เกิน 2MB
+    limits: { fileSize: 5 * 1024 * 1024 }, // ไม่เกิน 2MB
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
