@@ -624,9 +624,12 @@ function getMemberStatus(m) {
 function loadBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
-    const savedTitle = localStorage.getItem("fund-dashboard-branch-title");
-    if (savedTitle) {
-        titleEl.textContent = savedTitle;
+    const branchName = sessionStorage.getItem("admin_branch_name");
+    if (branchName) {
+        titleEl.textContent = branchName;
+    } else {
+        const branch = sessionStorage.getItem("admin_branch") || "comsci41";
+        titleEl.textContent = branch;
     }
 }
 
