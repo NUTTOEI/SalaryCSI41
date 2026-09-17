@@ -573,7 +573,6 @@ function updateModeUI(mode) {
 function initAdminApp() {
     localStorage.setItem("fund-dashboard-mode", "month");
     updateModeUI(getCollectionMode());
-    setupBranchTitle();
 }
 
 function getMemberStatus(m) {
