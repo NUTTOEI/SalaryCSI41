@@ -87,7 +87,7 @@ function renderMemberDetail() {
     if (nameEl) nameEl.textContent = currentMember.name;
     if (avatarEl) {
         if (currentMember.profileImg) {
-            avatarEl.innerHTML = `<img src=${currentMember.profileImg}" alt="${currentMember.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+              avatarEl.innerHTML = `<img src="${currentMember.profileImg}" alt="${currentMember.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
             avatarEl.style.background = 'transparent';
         } else {
             avatarEl.innerHTML = currentMember.id;
