@@ -642,28 +642,6 @@ async function loadBranchTitle() {
     }
 }
 
-async function setupBranchTitle() {
-    const titleEl = document.getElementById("branch-title");
-    if (!titleEl) return;
-
-    await loadBranchTitle();
-
-    titleEl.addEventListener("blur", async () => {
-        const newTitle = titleEl.textContent.trim() || "Comsci 41";
-        if (!newTitle) return;
-        try {
-            const branch = sessionStorage.getItem("admin_branch");
-            await fetch('/api/admin/branch/update-name', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ branchName: newTitle })
-            });
-            sessionStorage.setItem("admin_branch_name", newTitle);
-        } catch (error) {
-            console.error("ไม่สามารถอัพพเดทชื่อสาขา:", error);
-        }
-    });
-}
 
 // เข้าสู่ระบบแอดมินผ่าน MySQL
 async function processAdminLogin() {
