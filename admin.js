@@ -824,7 +824,7 @@ async function loadBranchAvatar(branch) {
 }
 
 // Event Listeners สำหรับ UI Components
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async() => {
     await loadBranchTitle();
     initAdminApp();
     initAdminAuth();
