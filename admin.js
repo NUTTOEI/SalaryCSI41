@@ -252,9 +252,18 @@ function renderRow(m, index) {
     const historyCount = m.history ? m.history.length : 0;
     const branchBadge = `<span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; margin-left:6px;">${m.branch || 'comsci41'}</span>`;
 
+    let avatarHTML = '';
+    if (m.profileImg) {
+        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object=fit: cover;">`;
+    } else {
+        avatarHTML = displayNum;
+    }
+
     return `
     <div class="member-row" data-toggle-id="${m.id}">
-        <div class="m-avatar" style="background:${tint.bg};color:${tint.fg}">${displayNum}</div>
+        <div class="m-avatar" style="background:${m.profileImg ? 'transparent' : tint.bg};color:${tint.fg}">
+            ${avatarHTML}
+        </div>
         <div class="m-text">
             <div class="m-name">${m.name} ${branchBadge}</div>
             <div class="m-sub">${subText}</div>
