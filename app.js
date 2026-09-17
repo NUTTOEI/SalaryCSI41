@@ -389,7 +389,7 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
         if (!req.file) return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
 
         const result = await uploadToCloudinary(req.file.buffer);
-        const avatarUrl = `/uploads/${req.file.filename}`;
+        const avatarUrl = result.secure_url;
 
         await pool.query(
             `INSERT INTO settings ("key", "value") VALUES ($1, $2) ON CONFLICT ("key") DO UPDATE SET "value" = $3`,
