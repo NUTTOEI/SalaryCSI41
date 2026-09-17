@@ -85,7 +85,16 @@ function renderMemberDetail() {
     const nameEl = document.getElementById("detail-name");
     const avatarEl = document.getElementById("detail-avatar");
     if (nameEl) nameEl.textContent = currentMember.name;
-    if (avatarEl) avatarEl.textContent = currentMember.id;
+    if (avatarEl) {
+        if (currentMember.profileImg) {
+            avatarEl.innerHTML = `<img src=${currentMember.profileImg}" alt="${currentMember.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            avatarEl.style.background = 'transparent';
+        } else {
+            avatarEl.innerHTML = currentMember.id;
+            avatarEl.style.background = '#eef0fb';
+            avatarEl.style.color = '#4c5fd5';
+        }
+    }
 
     const rate = Number(currentMember.amount) || 100;
     const mode = localStorage.getItem("fund-dashboard-mode") || "month";
