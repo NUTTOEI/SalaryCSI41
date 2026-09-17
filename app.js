@@ -429,7 +429,20 @@ app.post('/api/admin/login', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ' });
 
         const admin = rows[0];
-        res.json({ success: true, studentId: admin.student_id, name: admin.name, branch: admin.branch });
+        const { rows: branchRows } = await pool.query(
+            "SELECT branch_name FROM branches WHERE branch_code = $1",
+            [admin.branch]
+        );
+
+        const branchName = branchRows.length > 0 ? branchRows[0].branch_name : admin.branch;
+
+        res.json({ 
+            success: true, 
+            studentId: admin.student_id, 
+            name: admin.name, 
+            branch: admin.branch,
+            branchName: branchName 
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

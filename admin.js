@@ -677,6 +677,7 @@ async function processAdminLogin() {
         sessionStorage.setItem("admin_student_id", data.studentId);
         sessionStorage.setItem("admin_branch", data.branch);
         sessionStorage.setItem("admin_name", data.name || "");
+        sessionStorage.setItem("admin_branch_name", data.branchName);
 
         const loginModal = document.getElementById("login-modal");
         const mainDashboard = document.getElementById("main-dashboard");
@@ -685,6 +686,7 @@ async function processAdminLogin() {
         if (mainDashboard) mainDashboard.style.display = "block";
         
         applyAdminBranch(data.branch);
+        loadFromStorage();
     } catch (err) {
         showLoginError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
