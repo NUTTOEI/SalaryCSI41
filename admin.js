@@ -484,8 +484,8 @@ async function loadFromStorage() {
             TARGET_AMOUNT = Number(targetData.target) || 4000;
         }
 
-        const branchFilter = document.getElementById("filter-branch-select")?.value;
-        const url = branchFilter ? `/api/members?branch=${branchFilter}` : "/api/members";
+        const adminBranch = document.getElementById("admin_branch");
+        const url = adminBranch ? `/api/members?branch=${adminBranch}` : "/api/members";
 
         const response = await fetch(url, { cache: "no-store" });
         if (response.ok) {
