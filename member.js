@@ -108,8 +108,18 @@ function renderUserList() {
 
     list.innerHTML = items.map(m => {
         const tint = typeof tintFor === "function" ? tintFor(m.id) : { bg: "#eef0fb", fg: "#4c5fd5" };
+
+        let avatarHTML = '';
+        if (m.profileImg) {
+            avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        } else {
+            avatarHTML = memberNumber(m);
+        }
+
         return `<button class="user-item" data-select-id="${m.id}">
-            <div class="avatar" style="background:${tint.bg};color:${tint.fg}">${memberNumber(m)}</div>
+            <div class="avatar" style="background:${m.profileImg ? 'transparent' : tint.bg};color:${tint.fg}">
+                ${avatarHTML}
+            </div>
             <div class="u-name">${m.name}</div>
             ${statusLabel(m)}
         </button>`;
@@ -689,6 +699,7 @@ async function handleProfileUpload(event) {
             if (m) m.profileImg = data.profileImg;
 
             renderProfile();
+            renderUserList();
 
             Swal.fire({
                 icon: 'success',
