@@ -414,6 +414,24 @@ app.get('/api/admin/branch/name', async (req, res) => {
     }
 });
 
+app.put('/api/admin/branch/name', async (req, res) => {
+    try {
+        const { branch, branchName } = req.body;
+        if (!branch || !branchName) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุสาขาและชื่อสาขาใหม่' });
+        }
+
+        await pool.query(
+            `UPDATE branch SET branch_name = $1 WHERE branch_code = $2`,
+            [branchName.trim(), branch]
+        );
+
+        res.json({ success: true, message: 'อัปเดทชื่อสาขาสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 /* ------------------------------------------------------------------ */
 /* API: สมัครสมาชิก และ เข้าสู่ระบบแอดมิน                                 */
 /* ------------------------------------------------------------------ */

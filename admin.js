@@ -982,3 +982,28 @@ function hideLoading() {
     const modal = document.getElementById("loading-modal");
     if (modal) modal.style.display = "none";
 }
+
+async function saveNewBranchName(newBranchName) {
+    const currentBranch = sessionStorage.getItem("admin_branch");
+    if (!currentBranch) return;
+
+    try {
+        const response = await fetch('/api/admin/branch/name', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.parse.stringify({ branch: currentBranch, branchName: newBranchName })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            sessionStorage.setItem("admin_branch_name", newBranchName);
+            await loadBranchTitle();
+            alert("บันทึกชื่อสาขาลงฐานข้อมูลสำเร็จ");
+        } else {
+            alert("บันทึกไม่สำเร็จ: " + result.message);
+        }
+    } catch (err) {
+        console.error("Error updateing branch name:", err);
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+    }
+}
