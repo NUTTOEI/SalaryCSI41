@@ -864,12 +864,16 @@ document.addEventListener('DOMContentLoaded', async() => {
     const settingPreview = document.getElementById('settings-avatar-preview');
     const mainAvatar = document.getElementById('branch-avatar-img');
     const saveAvatarBtn = document.getElementById('save-avatar-btn');
+    const branchNameInput = document.getElementById('settings-branch-name-input');
 
     let selectedFile = null;
 
     openSettingBtn?.addEventListener('click', () => {
         if (settingPreview && mainAvatar) {
             settingPreview.src = mainAvatar.src;
+        }
+        if (branchNameInput) {
+            branchNameInput.value = sessionStorage.getItem("admin_branch_name") || document.getElementById("branch-title")?.textContent || "";
         }
         if (settingsModal) settingsModal.style.display = 'flex';
     });
@@ -882,8 +886,8 @@ document.addEventListener('DOMContentLoaded', async() => {
     avatarInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                alert('ขนาดไฟล์ต้องไม่เกิน 2MB');
+            if (file.size > 10 * 1024 * 1024) {
+                alert('ขนาดไฟล์ต้องไม่เกิน 10MB');
                 avatarInput.value = '';
                 return;
             }
@@ -897,38 +901,48 @@ document.addEventListener('DOMContentLoaded', async() => {
     });
 
     saveAvatarBtn?.addEventListener('click', async () => {
-        if (!selectedFile) {
-            alert('กรุณาเลือกรูปภาพใหม่ก่อนบันทึก');
-            return;
-        }
-
         const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
-        const formData = new FormData();
-        formData.append('branch', currentBranch);
-        formData.append('avatar', selectedFile);
+        const newBranchName = branchNameInput ? branchNameInput.value.trim() : "";
 
         if (settingsModal) settingsModal.style.display = 'none';
-        showLoading("กำลังอัปโหลดรูปโปรไฟล์...");
+        showLoading("กำลังบันทึกข้อมูล...");
 
         try {
-            const response = await fetch('/api/admin/branch/upload-profile', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                const updatedUrl = `${result.avatarUrl}?t=${Date.now()}`;
-                if (mainAvatar) mainAvatar.src = updatedUrl;
-                selectedFile = null;
-                showSuccess("เปลี่ยนรูปโปรไฟล์สำเร็จ!");
-            } else {
-                hideLoading();
-                alert('เกิดข้อผิดพลาด: ' + (result.message || 'ไม่สามารถอัปโหลดได้'));
+            // 1. บันทึกชื่อสาขา (ถ้ามีการกรอก)
+            if (newBranchName) {
+                const nameRes = await fetch('/api/admin/branch/name', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ branch: currentBranch, branchName: newBranchName })
+                });
+                const nameResult = await nameRes.json();
+                if (nameResult.success) {
+                    sessionStorage.setItem("admin_branch_name", newBranchName);
+                }
             }
+
+            // 2. อัปโหลดรูปภาพโปรไฟล์ (ถ้ามีการเลือกรูปใหม่)
+            if (selectedFile) {
+                const formData = new FormData();
+                formData.append('branch', currentBranch);
+                formData.append('avatar', selectedFile);
+
+                const response = await fetch('/api/admin/branch/upload-profile', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    const updatedUrl = `${result.avatarUrl}?t=${Date.now()}`;
+                    if (mainAvatar) mainAvatar.src = updatedUrl;
+                }
+            }
+
+            selectedFile = null;
+            await loadBranchTitle(); // โหลดชื่อสาขาและรีเฟรชหน้าจอ
+            showSuccess("บันทึกการตั้งค่าสำเร็จ!");
         } catch (error) {
-            console.error('Upload Error:', error);
+            console.error('Update Error:', error);
             hideLoading();
             alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         }
@@ -983,27 +997,3 @@ function hideLoading() {
     if (modal) modal.style.display = "none";
 }
 
-async function saveNewBranchName(newBranchName) {
-    const currentBranch = sessionStorage.getItem("admin_branch");
-    if (!currentBranch) return;
-
-    try {
-        const response = await fetch('/api/admin/branch/name', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.parse.stringify({ branch: currentBranch, branchName: newBranchName })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            sessionStorage.setItem("admin_branch_name", newBranchName);
-            await loadBranchTitle();
-            alert("บันทึกชื่อสาขาลงฐานข้อมูลสำเร็จ");
-        } else {
-            alert("บันทึกไม่สำเร็จ: " + result.message);
-        }
-    } catch (err) {
-        console.error("Error updateing branch name:", err);
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
-    }
-}

@@ -422,7 +422,7 @@ app.put('/api/admin/branch/name', async (req, res) => {
         }
 
         await pool.query(
-            `UPDATE branch SET branch_name = $1 WHERE branch_code = $2`,
+            `UPDATE branches SET branch_name = $1 WHERE branch_code = $2`,
             [branchName.trim(), branch]
         );
 
