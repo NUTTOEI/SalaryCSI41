@@ -410,7 +410,7 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded",  () => {
     const searchInput = document.getElementById("search-input");
     const rateInput = document.getElementById("rate-input");
     const applyRateBtn = document.getElementById("apply-rate-btn");
@@ -621,14 +621,23 @@ function getMemberStatus(m) {
     }
 }
 
-function loadBranchTitle() {
+async function loadBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
-    const branchName = sessionStorage.getItem("admin_branch_name");
-    if (branchName) {
-        titleEl.textContent = branchName;
-    } else {
-        const branch = sessionStorage.getItem("admin_branch") || "comsci41";
+    const branch = sessionStorage.getItem("admin_branch");
+    if (!branch) return;
+    
+    try {
+        const response = await fetch(`/api/admin/branch/name?branch=${branch}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.branchName) {
+                titleEl.textContent = data.branchName;
+                sessionStorage.setItem("admin_branch_name", data.branchName);
+            }
+        }
+    } catch (error) {
+        console.error("ไม่สามารถโหลดชื่อสาขา:", error);
         titleEl.textContent = branch;
     }
 }
@@ -816,6 +825,7 @@ async function loadBranchAvatar(branch) {
 
 // Event Listeners สำหรับ UI Components
 document.addEventListener('DOMContentLoaded', () => {
+    await loadBranchTitle();
     initAdminApp();
     initAdminAuth();
 

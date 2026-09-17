@@ -397,6 +397,23 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
     }
 });
 
+app.get('/api/admin/branch/name', async (req, res) => {
+    try {
+        const { branch } = req.query;
+        if (!branch) return res.status(400).json({ success: false, message: 'กรุณาระบุสาขา' });
+
+        const { rows } = await pool.query(
+            "SELECT branch_name FROM branches WHERE branch_code = $1",
+            [branch]
+        );
+        
+        const branchName = rows.length > 0 ? rows[0].branch_name : branch;
+        res.json({ success: true, branchName });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 /* ------------------------------------------------------------------ */
 /* API: สมัครสมาชิก และ เข้าสู่ระบบแอดมิน                                 */
 /* ------------------------------------------------------------------ */
