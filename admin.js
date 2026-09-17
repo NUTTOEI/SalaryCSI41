@@ -484,7 +484,7 @@ async function loadFromStorage() {
             TARGET_AMOUNT = Number(targetData.target) || 4000;
         }
 
-        const adminBranch = document.getElementById("admin_branch");
+        const adminBranch = sessionStorage.getItem("admin_branch");
         const url = adminBranch ? `/api/members?branch=${adminBranch}` : "/api/members";
 
         const response = await fetch(url, { cache: "no-store" });
