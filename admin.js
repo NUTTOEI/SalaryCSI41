@@ -642,22 +642,25 @@ async function loadBranchTitle() {
     }
 }
 
-function setupBranchTitle() {
+async function setupBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
 
-    loadBranchTitle();
+    await loadBranchTitle();
 
-    titleEl.addEventListener("blur", () => {
+    titleEl.addEventListener("blur", async () => {
         const newTitle = titleEl.textContent.trim() || "Comsci 41";
-        titleEl.textContent = newTitle;
-        localStorage.setItem("fund-dashboard-branch-title", newTitle);
-    });
-
-    titleEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            titleEl.blur();
+        if (!newTitle) return;
+        try {
+            const branch = sessionStorage.getItem("admin_branch");
+            await fetch('/api/admin/branch/update-name', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ branchName: newTitle })
+            });
+            sessionStorage.setItem("admin_branch_name", newTitle);
+        } catch (error) {
+            console.error("ไม่สามารถอัพพเดทชื่อสาขา:", error);
         }
     });
 }
