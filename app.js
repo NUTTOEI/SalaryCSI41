@@ -358,11 +358,14 @@ const branchStorage = multer.diskStorage({
 });
 
 const uploadBranchAvatar = multer({
-    storage: branchStorage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) cb(null, true);
-        else cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น'));
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น'));
+        }
     }
 });
 
@@ -385,7 +388,9 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
         if (!branch) return res.status(400).json({ success: false, message: 'กรุณาระบุสาขา' });
         if (!req.file) return res.status(400).json({ success: false, message: 'กรุณาเลือกไฟล์รูปภาพ' });
 
+        const result = await uploadToCloudinary(req.file.buffer);
         const avatarUrl = `/uploads/${req.file.filename}`;
+
         await pool.query(
             `INSERT INTO settings ("key", "value") VALUES ($1, $2) ON CONFLICT ("key") DO UPDATE SET "value" = $3`,
             [`avatar_branch_${branch}`, avatarUrl, avatarUrl]
@@ -393,6 +398,7 @@ app.post('/api/admin/branch/upload-profile', uploadBranchAvatar.single('avatar')
 
         res.json({ success: true, message: 'อัปเดตรูปโปรไฟล์สำเร็จ', avatarUrl });
     } catch (error) {
+        console.error('Cloudinary Upload Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
