@@ -67,6 +67,7 @@ button, input {
     font-size: 21px;
     font-weight: 600;
     color: var(--ink);
+    margin-bottom: 16px;
 }
 
 .admin-link {
@@ -270,6 +271,7 @@ button, input {
     box-shadow: var(--shadow);
     text-decoration: none;
     transition: all 0.2s ease;
+    margin-bottom: 16px;
 }
 
 .back-btn:hover {
