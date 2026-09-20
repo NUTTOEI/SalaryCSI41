@@ -342,13 +342,15 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         // 2. ตรวจสอบชื่อบัญชีผู้รับเงินตามสาขา (ปรับปรุงการเปรียบเทียบแบบยืดหยุ่น)
         const receiverName = slipData.receiver?.name || '';
         if (targetAccountName && targetAccountName.trim() !== '') {
-            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง|\s)/g, '').toLowerCase();
-            const cleanReceiver = receiverName.replace(/(นาย|นางสาว|นาง|\s)/g, '').toLowerCase();
+            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim();
+            const firstName = cleanTarget.split(/\s+/)[0]?.toLowerCase() || '';
+
+            const cleanReceiver = receiverName.toLowerCase();
 
             // เช็กว่ามีข้อความส่วนใดส่วนหนึ่งซ้อนทับกันหรือไม่
-            const isMatch = cleanReceiver.includes(cleanTarget) || cleanTarget.includes(cleanReceiver);
+            const isNameMatch = firstName !== '' && cleanReceiver.includes(firstName);
 
-            if (!isMatch) {
+            if (!isNameMatch) {
                 return res.status(400).json({ 
                     status: 'fail', 
                     message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
