@@ -339,24 +339,23 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท` });
         }
 
-        // 2. ตรวจสอบชื่อบัญชีผู้รับเงินตามสาขา (ปรับปรุงการเปรียบเทียบแบบยืดหยุ่น)
         const receiverName = slipData.receiver?.name || '';
-        if (targetAccountName && targetAccountName.trim() !== '') {
-            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim();
-            const firstName = cleanTarget.split(/\s+/)[0]?.toLowerCase() || '';
+        // if (targetAccountName && targetAccountName.trim() !== '') {
+        //     const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim();
+        //     const firstName = cleanTarget.split(/\s+/)[0]?.toLowerCase() || '';
 
-            const cleanReceiver = receiverName.toLowerCase();
+        //     const cleanReceiver = receiverName.toLowerCase();
 
-            // เช็กว่ามีข้อความส่วนใดส่วนหนึ่งซ้อนทับกันหรือไม่
-            const isNameMatch = firstName !== '' && cleanReceiver.includes(firstName);
+        //     // เช็กว่ามีข้อความส่วนใดส่วนหนึ่งซ้อนทับกันหรือไม่
+        //     const isNameMatch = firstName !== '' && cleanReceiver.includes(firstName);
 
-            if (!isNameMatch) {
-                return res.status(400).json({ 
-                    status: 'fail', 
-                    message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
-                });
-            }
-        }
+        //     if (!isNameMatch) {
+        //         return res.status(400).json({ 
+        //             status: 'fail', 
+        //             message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
+        //         });
+        //     }
+        // }
 
         const transRef = slipData.transRef;
         const { rows: existing } = await pool.query('SELECT trans_ref FROM processed_slips WHERE trans_ref = $1', [transRef]);
