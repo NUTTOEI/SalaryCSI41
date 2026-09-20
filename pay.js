@@ -11,23 +11,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     let branchPromptpay = "";
     let branchAccountName = "";
 
-    try {
-        if (member && member.branch) {
-            const branchRes = await fetch(`/api/branches/${member.branch}`);
-            if (branchRes.ok) {
-                const branchInfo = await branchRes.json();
-                branchPromptpay = branchInfo.promptpay_no || "";
-                branchAccountName = branchInfo.account_name || "";
-            }
-        }
-    } catch (e) {
-        console.error("❌ ดึงข้อมูลพร้อมเพย์สาขาไม่สำเร็จ:", e);
-    }
-
-    if (document.getElementById('qr-name')) {
-        document.getElementById('qr-name').textContent = branchAccountName || "บัญชีประจำสาขา";
-    }
-
     const COLLECTION_MODE = localStorage.getItem("fund-dashboard-mode") || "month";
 
     let selectedMonthIndex = new Date().getMonth();
@@ -59,6 +42,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         alert("ไม่พบข้อมูลสมาชิก กรุณาเลือกใหม่อีกครั้ง");
         location.href = "admin.html";
         return;
+    }
+
+    try {
+        if (member && member.branch) {
+            const branchRes = await fetch(`/api/branches/${member.branch}`);
+            if (branchRes.ok) {
+                const branchInfo = await branchRes.json();
+                branchPromptpay = branchInfo.promptpay_no || "";
+                branchAccountName = branchInfo.account_name || "";
+            }
+        }
+    } catch (e) {
+        console.error("❌ ดึงข้อมูลพร้อมเพย์สาขาไม่สำเร็จ:", e);
+    }
+
+    if (document.getElementById('qr-name')) {
+        document.getElementById('qr-name').textContent = branchAccountName || "บัญชีประจำสาขา";
     }
 
     const rate = Number(member.amount)

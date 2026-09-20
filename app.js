@@ -295,10 +295,32 @@ app.put('/api/admin/members/amount-all', async (req, res) => {
 app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
     try {
         const expectedAmount = parseFloat(req.body.expected_amount);
-        if (!req.file || isNaN(expectedAmount)) return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
+        const studentId = req.body.student_id; // เพิ่มรับ student_id
+
+        if (!req.file || isNaN(expectedAmount)) {
+            return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
+        }
+
+        // 1. ดึงข้อมูลสาขาและบัญชีผู้รับของสมาชิกคนนี้จาก Database
+        let targetAccountName = "";
+        let targetPromptPay = "";
+        
+        if (studentId) {
+            const { rows: branchRows } = await pool.query(
+                `SELECT b.promptpay_no, b.account_name 
+                 FROM members m 
+                 JOIN branches b ON m.branch = b.branch_code 
+                 WHERE m.student_id = $1`,
+                [studentId]
+            );
+            if (branchRows.length > 0) {
+                targetPromptPay = branchRows[0].promptpay_no || "";
+                targetAccountName = branchRows[0].account_name || "";
+            }
+        }
 
         const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
-        const branchId = '73437';
+        const branchId = '73437'; // SlipOK Branch ID
         const formData = new FormData();
         formData.append('files', req.file.buffer, { filename: req.file.originalname || 'slip.jpg', contentType: req.file.mimetype });
         formData.append('log', 'true');
@@ -313,14 +335,15 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         const slipData = result.data;
         const transferorName = String(slipData.sender?.name || slipData.sender?.displayName || slipData.sender?.account?.name || '').trim();
 
-        if (parseFloat(slipData.amount) !== expectedAmount) return res.status(400).json({ status: 'fail', message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท` });
+        if (parseFloat(slipData.amount) !== expectedAmount) {
+            return res.status(400).json({ status: 'fail', message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท` });
+        }
 
+        // 2. ตรวจสอบชื่อบัญชีผู้รับเงินตามสาขา (หากมีการตั้งค่าไว้ใน DB)
         const receiverName = slipData.receiver?.name || '';
-        const receiverUpper = receiverName.toUpperCase();
-        const ALLOWED_RECEIVERS = ["สุพรรณณิกา", "คงคาศรี", "SUPHANNIKA", "KHONGKASRI"];
-        const isReceiverValid = ALLOWED_RECEIVERS.some(keyword => keyword.trim() !== '' && receiverUpper.includes(keyword.toUpperCase()));
-
-        if (!isReceiverValid) return res.status(400).json({ status: 'fail', message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้โอนไปยัง: ${receiverName}` });
+        if (targetAccountName && !receiverName.toLowerCase().includes(targetAccountName.toLowerCase())) {
+            return res.status(400).json({ status: 'fail', message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` });
+        }
 
         const transRef = slipData.transRef;
         const { rows: existing } = await pool.query('SELECT trans_ref FROM processed_slips WHERE trans_ref = $1', [transRef]);
@@ -328,7 +351,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         await pool.query('INSERT INTO processed_slips (trans_ref) VALUES ($1)', [transRef]);
 
-        const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n👤 ผู้รับ: ${slipData.receiver?.name || 'ไม่ระบุ'}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
+        const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n👤 ผู้รับ: ${receiverName || 'ไม่ระบุ'}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
 
         if (LINE_ACCESS_TOKEN && LINE_TARGET_IDS.length > 0) {
             await axios.post('https://api.line.me/v2/bot/message/multicast', 
@@ -577,7 +600,7 @@ app.get('/api/branches/:code', async (req, res) => {
     try {
         const { code } = req.params;
         const { rows } = await pool.query(
-            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branch WHERE branch_code = $1",
+            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branches WHERE branch_code = $1",
             [code]
         );
         if (rows.length === 0) {
