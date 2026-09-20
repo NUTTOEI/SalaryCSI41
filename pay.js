@@ -8,10 +8,24 @@ function getBase64(file) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    let branchPromptpay = "";
+    let branchAccountName = "";
+
+    try {
+        if (member && member.branch) {
+            const branchRes = await fetch(`/api/branches/${member.branch}`);
+            if (branchRes.ok) {
+                const branchInfo = await branchRes.json();
+                branchPromptpay = branchInfo.promptpay_no || "";
+                branchAccountName = branchInfo.account_name || "";
+            }
+        }
+    } catch (e) {
+        console.error("❌ ดึงข้อมูลพร้อมเพย์สาขาไม่สำเร็จ:", e);
+    }
+
     if (document.getElementById('qr-name')) {
-        document.getElementById('qr-name').textContent = (typeof ROOM !== 'undefined' && ROOM.promptpayName)
-            ? ROOM.promptpayName
-            : "น.ส.สุพรรณณิกา คงคาศรี";
+        document.getElementById('qr-name').textContent = branchAccountName || "บัญชีประจำสาขา";
     }
 
     const COLLECTION_MODE = localStorage.getItem("fund-dashboard-mode") || "month";
@@ -184,14 +198,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function updateQRCode() {
-        const promptpayAccount = (typeof ROOM !== 'undefined' && ROOM.promptpayId)
-            ? ROOM.promptpayId
-            : (typeof window.targetAcc !== 'undefined' ? window.targetAcc : "0942411478");
-
+        const promptpayAccount = branchPromptpay || "0942411478";
         const totalAmount = selectedMonths.length * rate;
 
         if (typeof buildPromptPayPayload === "function" && totalAmount > 0) {
-            const payload = buildPromptPayPayload(promptpayAccount, totalAmount);
+            const payload = buildPromptPayPayload(promptpayAccount, totalAmount, branchAccountName);
             const qrImg = document.getElementById('qr-img');
             if (qrImg) {
                 const combinedDataUrl = await generateCombinedQRCode(payload);
@@ -246,6 +257,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const formData = new FormData();
             formData.append("slip_image", slipInput.files[0]);
             formData.append("expected_amount", payAmount);
+            formData.append("student_id", member.studentId || member.student_id);
 
             try {
                 const verifyRes = await fetch("/verify-slip", {

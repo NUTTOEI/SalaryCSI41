@@ -571,3 +571,20 @@ app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
 });
+
+
+app.get('/api/branches/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { rows } = await pool.query(
+            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branch WHERE branch_code = $1",
+            [code]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'ไม่พบสาขา' });
+        }
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
