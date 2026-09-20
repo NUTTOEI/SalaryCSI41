@@ -295,7 +295,7 @@ app.put('/api/admin/members/amount-all', async (req, res) => {
 app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
     try {
         const expectedAmount = parseFloat(req.body.expected_amount);
-        const studentId = req.body.student_id; // เพิ่มรับ student_id
+        const studentId = req.body.student_id;
 
         if (!req.file || isNaN(expectedAmount)) {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
@@ -339,19 +339,22 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท` });
         }
 
-        // 2. ตรวจสอบชื่อบัญชีผู้รับเงินตามสาขา (หากมีการตั้งค่าไว้ใน DB)
+        // 2. ตรวจสอบชื่อบัญชีผู้รับเงินตามสาขา (ปรับปรุงการเปรียบเทียบแบบยืดหยุ่น)
         const receiverName = slipData.receiver?.name || '';
         if (targetAccountName && targetAccountName.trim() !== '') {
-        const cleanTarget = targetAccountName.replace(/\s+/g, '').toLowerCase();
-        const cleanReceiver = receiverName.replace(/\s+/g, '').toLowerCase();
+            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง|\s)/g, '').toLowerCase();
+            const cleanReceiver = receiverName.replace(/(นาย|นางสาว|นาง|\s)/g, '').toLowerCase();
 
-        if (!cleanReceiver.includes(cleanTarget)) {
-            return res.status(400).json({ 
-                status: 'fail', 
-                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
-            });
+            // เช็กว่ามีข้อความส่วนใดส่วนหนึ่งซ้อนทับกันหรือไม่
+            const isMatch = cleanReceiver.includes(cleanTarget) || cleanTarget.includes(cleanReceiver);
+
+            if (!isMatch) {
+                return res.status(400).json({ 
+                    status: 'fail', 
+                    message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
+                });
+            }
         }
-    }
 
         const transRef = slipData.transRef;
         const { rows: existing } = await pool.query('SELECT trans_ref FROM processed_slips WHERE trans_ref = $1', [transRef]);
@@ -377,8 +380,24 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* API: รูปโปรไฟล์สาขา                                                 */
+/* API: ข้อมูลและรูปโปรไฟล์สาขา                                           */
 /* ------------------------------------------------------------------ */
+app.get('/api/branches/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { rows } = await pool.query(
+            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branches WHERE branch_code = $1",
+            [code]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'ไม่พบสาขา' });
+        }
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
 const branchStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
@@ -601,21 +620,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
-});
-
-
-app.get('/api/branches/:code', async (req, res) => {
-    try {
-        const { code } = req.params;
-        const { rows } = await pool.query(
-            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branches WHERE branch_code = $1",
-            [code]
-        );
-        if (rows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'ไม่พบสาขา' });
-        }
-        res.json(rows[0]);
-    } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
-    }
 });
