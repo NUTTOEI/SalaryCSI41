@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function generateCombinedQRCode(payload) {
-        const headersImgUrl = 'promptpay-header.png';
+        const headerImgUrl = 'promptpay-header.png';
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300&data=${encodeURLComponent(payload)}`;
 
         const loadImage = (src) => new Promise((resolve, reject) => {
