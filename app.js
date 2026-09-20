@@ -341,9 +341,17 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         // 2. ตรวจสอบชื่อบัญชีผู้รับเงินตามสาขา (หากมีการตั้งค่าไว้ใน DB)
         const receiverName = slipData.receiver?.name || '';
-        if (targetAccountName && !receiverName.toLowerCase().includes(targetAccountName.toLowerCase())) {
-            return res.status(400).json({ status: 'fail', message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` });
+        if (targetAccountName && targetAccountName.trim() !== '') {
+        const cleanTarget = targetAccountName.replace(/\s+/g, '').toLowerCase();
+        const cleanReceiver = receiverName.replace(/\s+/g, '').toLowerCase();
+
+        if (!cleanReceiver.includes(cleanTarget)) {
+            return res.status(400).json({ 
+                status: 'fail', 
+                message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
+            });
         }
+    }
 
         const transRef = slipData.transRef;
         const { rows: existing } = await pool.query('SELECT trans_ref FROM processed_slips WHERE trans_ref = $1', [transRef]);
