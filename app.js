@@ -659,10 +659,8 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
 
         // 2. เรียก API ไปสร้างบัญชีในหน้า Dashboard ของ SlipOK
         try {
-            const url = `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`;
-
             const slipokRes = await axios.post(
-                url,
+                `https://api.slipok.com/api/line/bankaccount`,
                 {
                     bank_code: '029', // 029 คือ พร้อมเพย์
                     bank_account_no: cleanPromptpay,
