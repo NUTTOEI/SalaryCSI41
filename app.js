@@ -353,19 +353,22 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         // 4. ตรวจสอบชื่อผู้รับ (เช็กว่าโอนเข้าบัญชี Admin ของสาขานี้จริงไหม)
         if (targetAccountName && targetAccountName.trim() !== '') {
-            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim().toLowerCase();
-            const cleanReceiver = receiverName.toLowerCase();
+            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง|mr\.|mrs\.|ms\.)/gi, '').trim().toLowerCase();
+            const cleanReceiver = receiverName.replace(/(นาย|นางสาว|นาง|mr\.|mrs\.|ms\.)/gi, '').trim().toLowerCase();
 
             // นำคำแรกของชื่อเปรียบเทียบ
-            const firstName = cleanTarget.split(/\s+/)[0] || '';
-            
-            if (firstName !== '' && !cleanReceiver.includes(firstName)) {
-                return res.status(400).json({ 
-                    status: 'fail', 
-                    message: `สลิปไม่ถูกต้อง! ต้องโอนเข้าบัญชี: ${targetAccountName} เท่านั้น (ผู้รับในสลิปคือ: ${receiverName || 'ไม่ทราบชื่อ'})` 
-                });
+            const targetWords = cleanTarget.split(/\s+/).filter(word => word.length > 0);
+    
+            const isMatched = targetWords.some(word => cleanReceiver.includes(word));
+
+            if (!isMatched) {
+                console.log(`[Slip Check] Mismatch Warning: Target="${targetAccountName}" vs Receiver="${receiverName}"`);
+                   return res.status(400).json({ 
+                        status: 'fail', 
+                        message: `สลิปไม่ถูกต้อง! ต้องโอนเข้าบัญชี: ${targetAccountName} เท่านั้น (ผู้รับในสลิปคือ: ${receiverName || 'ไม่ทราบชื่อ'})` 
+                    });
+                }
             }
-        }
 
         // 5. ป้องกันการส่งสลิปซ้ำ (Duplicate TransRef)
         const transRef = slipData.transRef;
