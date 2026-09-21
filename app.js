@@ -254,7 +254,10 @@ app.post('/api/admin/reset', async (req, res) => {
 /* ------------------------------------------------------------------ */
 app.get('/api/settings/target', async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT "value" FROM settings WHERE "key" = $1', ['target_amount']);
+        const { branch } = req.query;
+        const targetKey = branch ? `target_branch_${branch}` : 'target-amount';
+
+        const { rows } = await pool.query('SELECT "value" FROM settings WHERE "key" = $1', [targetKey]);
         const targetVal = rows.length ? Number(rows[0].value) : 4000;
         res.json({ target: isNaN(targetVal) ? 4000 : targetVal });
     } catch (err) {
@@ -264,15 +267,21 @@ app.get('/api/settings/target', async (req, res) => {
 
 app.put('/api/settings/target', async (req, res) => {
     try {
-        const target = Number(req.body.target);
-        if (!isFinite(target) || target <= 0) return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
+        const { target, branch } = req.body;
+        const targetNum = Number(target);
+
+        if (!isFinite(targetNum) || targetNum <= 0) {
+            return res.status(400).json({ status: 'error', message: 'เป้าหมายไม่ถูกต้อง' });
+        }
+
+        const targetKey = branch ? `target_branch_${branch}` : 'target_amount';
         
         await pool.query(
-            `INSERT INTO settings ("key", "value") VALUES ('target_amount', $1) 
-             ON CONFLICT ("key") DO UPDATE SET "value" = $2`,
-            [String(target), String(target)]
+            `INSERT INTO settings ("key", "value") VALUES ($1, $2) 
+             ON CONFLICT ("key") DO UPDATE SET "value" = $3`,
+            [targetKey, String(targetNum), String(targetNum)]
         );
-        res.json({ status: 'success', target });
+        res.json({ status: 'success', target: targetNum });
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
     }

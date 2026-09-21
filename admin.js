@@ -478,15 +478,15 @@ function closeHistoryModal() {
 
 async function loadFromStorage() {
     try {
-        const targetRes = await fetch("/api/settings/target", { cache: "no-store" });
+        const adminBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+
+        const targetRes = await fetch(`/api/settings/target?branch=${adminBranch}`, { cache: "no-store" });
         if (targetRes.ok) {
             const targetData = await targetRes.json();
             TARGET_AMOUNT = Number(targetData.target) || 4000;
         }
 
-        const adminBranch = sessionStorage.getItem("admin_branch");
         const url = adminBranch ? `/api/members?branch=${adminBranch}` : "/api/members";
-
         const response = await fetch(url, { cache: "no-store" });
         if (response.ok) {
             MEMBERS = await response.json();
@@ -528,14 +528,17 @@ async function saveTargetAmount() {
     showLoading("กำลังบันทึกเป้าหมาย...");
         
     try {
+        const adminBranch = sessionStorage.getItem("admin_branch") || "comsci41";
         const response = await fetch('/api/settings/target', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: Number(targetValue) })
+            body: JSON.stringify({ 
+                branch: adminBranch,
+                target: Number(targetValue) 
+            })
         });
 
         if (response.ok) {
-            localStorage.setItem('fund-dashboard-target', targetValue);
             await loadFromStorage();
             showSuccess("บันทึกเป้าหมายสำเร็จ");
         } else {
