@@ -16,36 +16,56 @@
 <body>
 
     <!-- ปุ่มสามขีดมุมขวาบน -->
-    <button id="menu-toggle-btn" class="menu-toggle-btn" title="เปิดเมนู">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
-    </button>
+    <div class="profile-dropdown-wrapper">
+        <button id="menu-toggle-btn" class="profile-trigger-btn" title="เมนูผู้ใช้งาน">
+            <div class="avatar-mini">
+                <img id="header-avatar-img" src="default-branch.png" alt="Branch Profile" onerror="this.onerror=null; this.src='https://placehold.co/150';">
+            </div>
+            <span class="trigger-label">เมนูจัดการ</span>
+            <i class="ti ti-chevron-down"></i>
+        </button>
 
-    <!-- ฉากหลังจางๆ เมื่อเปิดเมนู -->
-    <div id="menu-overlay" class="menu-overlay"></div>
-
-    <!-- เมนูด้านข้างที่สไลด์ออกมา -->
-    <div id="side-drawer" class="side-drawer">
-        <div class="drawer-header">
-            <h3>MENU</h3>
-            <button class="close-btn" id="close-drawer-btn"><i class="ti ti-x"></i></button>
-        </div>
-        <div class="drawer-body">
-            <div class="drawer-profile-display">
-                <div class="avatar-circle">
-                    <img id="branch-avatar-img" src="default-branch.png" alt="Branch Profile" onerror="this.onerror=null; this.src='https://placehold.co/150';">
+        <div id="profile-dropdown" class="mega-dropdown-menu">
+            <div class="mega-dropdown-grid">
+                <div class="mega-col">
+                    <div class="col-header">
+                        โปรไฟล์สาขา <span class="badge-tag">Main</span>
+                    </div>
+                    <div class="profile-summary-box">
+                        <div class="avatar-circle">
+                            <img id="branch-avatar-img" src="default-branch.png" alt="Branch Profile" onerror="this.onerror=null; this.src='https://placehold.co/150';">
+                        </div>
+                        <div class="profile-info">
+                            <div class="branch-name" id="dropdown-branch-display">BWBS</div>
+                            <div class="branch-role">ผู้ดูแลระบบ</div>
+                        </div>
+                    </div>
+                    <button type="button" class="mega-item-btn" id="open-setting-btn">
+                        <i class="ri-setting-3-line"></i> ตั้งค่าโปรไฟล์สาขา
+                    </button>
                 </div>
-            </div>
-            <hr class="drawer-divider">
 
-            <div class="drawer-menu-list">
-                <button type="button" class="drawer-menu-item" id="open-setting-btn">
-                    <i class="ri-setting-3-line"></i> ตั้งค่าโปรไฟล์
-                </button>
-            </div>
+                <div class="mega-col">
+                    <div class="col-header">การจัดการระบบ</div>
+                    <a href="member.html" class="mega-item-link">
+                        <i class="ti ti-users"></i> หน้าสำหรับสมาชิก
+                    </a>
+                    <button type="button" class="mega-item-btn" id="mega-target-btn">
+                        <i class="ti ti-target-arrow"></i> ตั้งเป้าหมายยอดรวม
+                    </button>
+                    <button type="button" class="mega-item-btn" id="mega-export-btn">
+                        <i class="ti ti-file-spreadsheet"></i> ส่งออกไฟล์ Excel
+                    </button>
+                </div>
 
-            <button id="logout-btn" class="logout-btn">
-                <i class="ri-logout-box-r-line"></i> ออกจากระบบ
-            </button>
+                <div class="mega-col">
+                    <div class="col-header">บัญชีผู้ใช้</div>
+                    <button type="button" class="mega-item-btn danger" id="logout-btn">
+                        <i class="ri-logout-box-r-line"></i> ออกจากระบบ
+                    </button>
+                 </div>
+
+            </div>
         </div>
     </div>
 

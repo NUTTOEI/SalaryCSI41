@@ -254,7 +254,7 @@ function renderRow(m, index) {
 
     let avatarHTML = '';
     if (m.profileImg) {
-        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object=fit: cover;">`;
+        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
     } else {
         avatarHTML = displayNum;
     }
@@ -792,9 +792,12 @@ async function loadBranchAvatar(branch) {
             const data = await response.json();
             if (data.avatarUrl) {
                 const avatarImg = document.getElementById('branch-avatar-img');
+                const headerAvatarImg = document.getElementById('header-avatar-img');
                 const settingImg = document.getElementById('settings-avatar-preview');
                 const timestampedUrl = `${data.avatarUrl}?t=${Date.now()}`;
+
                 if (avatarImg) avatarImg.src = timestampedUrl;
+                if (headerAvatarImg) headerAvatarImg.src = timestampedUrl;
                 if (settingImg) settingImg.src = timestampedUrl;
             }
         }
@@ -809,25 +812,36 @@ document.addEventListener('DOMContentLoaded', async() => {
     initAdminApp();
     initAdminAuth();
 
-    // Drawer Menu & Overlay
     const menuBtn = document.getElementById("menu-toggle-btn");
-    const closeBtn = document.getElementById("close-drawer-btn");
-    const drawer = document.getElementById("side-drawer");
-    const overlay = document.getElementById("menu-overlay");
+    const dropdown = document.getElementById("profile-dropdown");
 
-    function openDrawer() {
-        drawer?.classList.add("open");
-        overlay?.classList.add("active");
-    }
+    menuBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dropdown?.classList.toggle("active");
 
-    function closeDrawer() {
-        drawer?.classList.remove("open");
-        overlay?.classList.remove("active");
-    }
+        const brnachDisplay = document.getElementById("dropdown-branch-display");
+        if (brnachDisplay) {
+            brnachDisplay.textContent = sessionStorage.getItem("admin_branch_name") || document.getElementById("branch-title")?.textContent || "BWBS";
+        }
+    });
 
-    menuBtn?.addEventListener("click", openDrawer);
-    closeBtn?.addEventListener("click", closeDrawer);
-    overlay?.addEventListener("click", closeDrawer);
+    document.addEventListener("click", (e) => {
+        if (dropdown && !dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
+            dropdown.classList.remove("active");
+        }
+    });
+
+    const megaTargetBtn = document.getElementById('mega-target-btn');
+    megaTargetBtn?.addEventListener('click', () => {
+        dropdown?.classList.remove("active");
+        if (typeof openTargetModal === "function") openTargetModal();
+    });
+
+    const megaExportBtn = document.getElementById('mega-export-btn');
+    megaExportBtn?.addEventListener('click', () => {
+        dropdown?.classList.remove("active");
+        if (typeof exportMembersToExcel === "function") exportMembersToExcel();
+    });
 
     // Logout Modal
     const logoutBtn = document.getElementById("logout-btn");
@@ -869,6 +883,7 @@ document.addEventListener('DOMContentLoaded', async() => {
     let selectedFile = null;
 
     openSettingBtn?.addEventListener('click', () => {
+        dropdown?.classList.remove("active");
         if (settingPreview && mainAvatar) {
             settingPreview.src = mainAvatar.src;
         }

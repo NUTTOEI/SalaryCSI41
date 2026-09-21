@@ -751,94 +751,6 @@ body {
   pointer-events: none !important; 
 }
 
-.menu-toggle-btn {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  z-index: 1000;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 8px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #334155;
-}
-
-.menu-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 9998;
-  display: none;
-}
-
-.menu-overlay.active {
-  display: block;
-}
-
-.side-drawer {
-  position: fixed;
-  top: 0;
-  right: -300px;
-  width: 260px;
-  height: 100vh;
-  background: #ffffff;
-  box-shadow: -4px 0 15px rgba(0,0,0,0.15);
-  z-index: 9999;
-  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 20px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-
-.side-drawer.open {
-  right: 0;
-}
-
-.drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 12px;
-  margin-bottom: 16px;
-}
-
-.drawer-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #1e293b;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #64748b;
-}
-
-.drawer-body {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-}
-
-.drawer-divider {
-  border: none;
-  border-top: 1px solid #f1f5f9;
-  margin: 16px 0;
-}
-
 .logout-btn {
   width: 100%;
   padding: 10px 14px;
@@ -955,13 +867,6 @@ body {
 }
 .btn-danger:hover { background: #dc2626; }
 
-.drawer-profile-display {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 12px 0;
-}
-
 .avatar-circle {
   width: 90px;
   height: 90px;
@@ -975,39 +880,6 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.drawer-menu-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.drawer-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid #E4E6F0;
-  background: #ffffff;
-  color: #1B1F3B;
-  font-size: 14px;
-  font-family: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.drawer-menu-item:hover {
-  background: #EEF0FB;
-  color: #4C5FD5;
-  border-color: #C7CCEB;
-}
-
-.drawer-menu-item i {
-  font-size: 18px;
 }
 
 .avatar-upload-label {
@@ -1246,4 +1118,208 @@ body {
   0% { transform: scale(0.8); }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+/* คอนเทนเนอร์หลัก */
+.profile-dropdown-wrapper {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* ปุ่มกดเปิด Dropdown */
+.profile-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #E4E6F0;
+  border-radius: 30px;
+  padding: 5px 14px 5px 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 13px;
+  color: #1B1F3B;
+  font-weight: 500;
+}
+
+.profile-trigger-btn:hover {
+  border-color: #4C5FD5;
+  box-shadow: 0 4px 12px rgba(76, 95, 213, 0.12);
+}
+
+.avatar-mini {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid #4C5FD5;
+}
+
+.avatar-mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Mega Dropdown Menu การ์ดแผ่นใหญ่ลอยลงมา */
+.mega-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 580px; /* ความกว้างแบบการ์ดใหญ่สไตล์ Kept */
+  background: #ffffff;
+  border-radius: 20px; /* มุมโค้งมนพิเศษ */
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(27, 31, 59, 0.12);
+  border: 1px solid #E2E8F0;
+  display: none;
+  animation: megaSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1001;
+}
+
+.mega-dropdown-menu.active {
+  display: block;
+}
+
+@keyframes megaSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ตารางแบ่งคอลัมน์ */
+.mega-dropdown-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 20px;
+}
+
+.mega-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.col-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8B90A8;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-tag {
+  background: #E0524B;
+  color: #ffffff;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+/* กล่องสรุปโปรไฟล์คอลัมน์แรก */
+.profile-summary-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F7F8FC;
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+
+.profile-summary-box .avatar-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid #4C5FD5;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-summary-box .avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.branch-name {
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1B1F3B;
+}
+
+.branch-role {
+  font-size: 11px;
+  color: #8B90A8;
+}
+
+/* ปุ่มและลิงก์รายการในเมนู */
+.mega-item-btn, .mega-item-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #1B1F3B;
+  font-size: 13px;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.mega-item-btn:hover, .mega-item-link:hover {
+  background: #EEF0FB;
+  color: #4C5FD5;
+  font-weight: 500;
+}
+
+.mega-item-btn i, .mega-item-link i {
+  font-size: 16px;
+  color: #4C5FD5;
+}
+
+.mega-item-btn.danger {
+  color: #E0524B;
+  margin-top: auto;
+}
+
+.mega-item-btn.danger i {
+  color: #E0524B;
+}
+
+.mega-item-btn.danger:hover {
+  background: #FBEAEA;
+  color: #DC2626;
+}
+
+/* รองรับ Responsive หน้าจอมือถือ */
+@media (max-width: 640px) {
+  .mega-dropdown-menu {
+    width: calc(100vw - 32px);
+    right: -8px;
+    padding: 16px;
+  }
+  .mega-dropdown-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
