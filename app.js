@@ -617,78 +617,29 @@ app.post('/api/member/upload-profile', (req, res) => {
 
 app.post('/api/admin/branch/register-promptpay', async (req, res) => {
     try {
-        // 1. Extract and validate all required fields
         const { branch, promptpayNo, accountName, accountNameEn } = req.body;
- 
-        // ✅ Detailed logging for debugging
-        console.log('📨 PromptPay Registration Request Received:', {
-            branch: branch || '[EMPTY]',
-            promptpayNo: promptpayNo || '[EMPTY]',
-            accountName: accountName || '[EMPTY]',
-            timestamp: new Date().toISOString(),
-            ip: req.ip
-        });
- 
-        // ✅ IMPROVED: Better validation with specific error messages
-        const missingFields = [];
-        
-        if (!branch || !String(branch).trim()) missingFields.push('branch');
-        if (!promptpayNo || !String(promptpayNo).trim()) missingFields.push('promptpayNo');
-        if (!accountName || !String(accountName).trim()) missingFields.push('accountName');
- 
-        if (missingFields.length > 0) {
-            console.error('❌ Missing fields:', missingFields);
-            return res.status(400).json({ 
-                success: false, 
-                message: `Missing or empty required fields: ${missingFields.join(', ')}`,
-                missingFields: missingFields,
-                code: 'MISSING_FIELDS'
-            });
+        if (!branch || !promptpayNo || !accountName) {
+            return res.status(400).json({ success: false, message: 'กรอกข้อมูลให้ครบถ้วน' });
         }
- 
-        // 2. Clean and prepare data
-        const cleanBranch = String(branch).trim();
-        const cleanPromptpay = String(promptpayNo).trim();
-        const cleanName = String(accountName).trim();
+
+        const cleanPromptpay = promptpayNo.trim();
+        const cleanName = accountName.trim();
         const cleanNameEn = (accountNameEn || accountName).trim();
- 
-        console.log('✅ Data validation passed, proceeding to SlipOK...');
- 
-        // 3. Validate PromptPay format (basic check)
-        // Thai PromptPay numbers are typically 10 digits (phone) or 13 digits (ID)
-        const ppRegex = /^[0-9]{10,13}$/;
-        if (!ppRegex.test(cleanPromptpay.replace(/[-\s]/g, ''))) {
-            console.warn('⚠️ Warning: PromptPay format might be invalid:', cleanPromptpay);
-            // Don't block - still allow to proceed (SlipOK will validate)
-        }
- 
-        // 4. Get API credentials
+
         const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
-        const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '73437').trim();
- 
-        if (!apiKey) {
-            console.error('❌ SLIPOK_API_KEY not configured');
-            return res.status(500).json({
-                success: false,
-                message: 'Server configuration error: SlipOK API key not set',
-                code: 'CONFIG_ERROR'
-            });
-        }
- 
-        console.log('📝 Registering with SlipOK:', {
-            slipokBranchId,
-            bank_code: '029 (PromptPay)',
-            bank_account_no: cleanPromptpay,
-            name: cleanName,
-            name_en: cleanNameEn
-        });
- 
-        // 5. Call SlipOK API
+        const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '').trim();
+
+        // 1. ส่งข้อมูลไป SlipOK 
+        // หมายเหตุ: กรณีใช้ API Key ยิงผ่าน Endpoint สาขา SlipOK
         try {
+            const url = slipokBranchId 
+                ? `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`
+                : `https://api.slipok.com/api/line/bankaccount`;
+
             const slipokRes = await axios.post(
-                `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`,
+                url,
                 {
-                    bank_code: '029', // 029 = PromptPay
+                    bank_code: '029', // 029 คือ PromptPay
                     bank_account_no: cleanPromptpay,
                     name: cleanName,
                     name_en: cleanNameEn
@@ -697,87 +648,39 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
                     headers: {
                         'x-authorization': apiKey,
                         'Content-Type': 'application/json'
-                    },
-                    timeout: 10000 // 10 second timeout
+                    }
                 }
             );
- 
-            console.log('✅ SlipOK Registration Success:', {
-                statusCode: slipokRes.status,
-                data: slipokRes.data
-            });
- 
+
+            console.log('✅ SlipOK Register Success:', slipokRes.data);
         } catch (slipokErr) {
             const errData = slipokErr.response?.data;
-            const errMsg = errData?.message || slipokErr.message;
-            const errCode = slipokErr.response?.status;
- 
+            const statusCode = slipokErr.response?.status || 500;
             console.error('❌ SlipOK API Error:', {
-                statusCode: errCode,
-                message: errMsg,
+                statusCode,
+                message: errData?.message || slipokErr.message,
                 fullError: errData,
                 promptpayNo: cleanPromptpay
             });
- 
-            // Return more detailed error to client
+
             return res.status(400).json({
                 success: false,
-                message: `SlipOK registration failed: ${errMsg}`,
-                code: 'SLIPOK_ERROR',
-                slipokStatus: errCode,
-                details: errData
+                message: `SlipOK Error (${statusCode}): ${errData?.message || 'ไม่พบ URL หรือ Branch ID ของ SlipOK'}`
             });
         }
- 
-        // 6. Update database only after SlipOK succeeds
-        console.log('💾 Updating database for branch:', cleanBranch);
- 
-        const updateResult = await pool.query(
+
+        // 2. อัปเดตข้อมูลลงฐานข้อมูล PostgreSQL
+        await pool.query(
             `UPDATE branches
-            SET promptpay_no = $1, account_name = $2, updated_at = NOW()
-            WHERE branch_code = $3
-            RETURNING *`,
-            [cleanPromptpay, cleanName, cleanBranch]
+            SET promptpay_no = $1, account_name = $2
+            WHERE branch_code = $3`,
+            [cleanPromptpay, cleanName, branch]
         );
- 
-        if (updateResult.rows.length === 0) {
-            console.warn('⚠️ Warning: Branch not found in database, creating new entry');
-            
-            // Create branch if it doesn't exist
-            await pool.query(
-                `INSERT INTO branches (branch_code, branch_name, promptpay_no, account_name, profile_img)
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (branch_code) DO UPDATE 
-                SET promptpay_no = $3, account_name = $4`,
-                [cleanBranch, cleanBranch, cleanPromptpay, cleanName, `${cleanBranch}.png`]
-            );
-        }
- 
-        console.log('✅ Database updated successfully');
- 
-        res.json({ 
-            success: true, 
-            message: 'PromptPay registered in system and SlipOK successfully',
-            code: 'SUCCESS',
-            data: {
-                branch: cleanBranch,
-                promptpayNo: cleanPromptpay,
-                accountName: cleanName
-            }
-        });
- 
+
+        res.json({ success: true, message: 'ลงทะเบียนพร้อมเพย์เรียบร้อยแล้ว' });
     } catch (err) {
-        console.error('❌ Server Error in register-promptpay:', {
-            message: err.message,
-            stack: err.stack,
-            code: err.code
-        });
- 
-        res.status(500).json({ 
-            success: false, 
-            message: 'Internal server error: ' + err.message,
-            code: 'SERVER_ERROR'
-        });
+        console.error('Register Promptpay Server Error:', err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
