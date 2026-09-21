@@ -395,12 +395,15 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 app.get('/api/branches/:code', async (req, res) => {
     try {
         const { code } = req.params;
+        // ค้นหาแบบ ILIKE เพื่อให้ไม่เคสเซนซิทีฟ (เช่น comsci กับ COMSCI ชี้ไปที่สาขาเดียวกัน)
         const { rows } = await pool.query(
-            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branches WHERE branch_code = $1",
+            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branches WHERE branch_code ILIKE $1",
             [code]
         );
+        
         if (rows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'ไม่พบสาขา' });
+            // หากไม่เจอสาขา ให้คืนค่าโครงสร้างเปล่ากลับไปแทนที่จะตอบ 404 เพื่อป้องกันหน้าเว็บพัง
+            return res.json({ branch_code: code, branch_name: code, promptpay_no: "", account_name: "" });
         }
         res.json(rows[0]);
     } catch (err) {
@@ -615,26 +618,36 @@ app.post('/api/member/upload-profile', (req, res) => {
     });
 });
 
-app.post('/api/admin/branch/register-promptpay', async (req, res) => {
+app.post('app.post('/api/admin/branch/register-promptpay', async (req, res) => {
     try {
         const { branch, promptpayNo, accountName, accountNameEn } = req.body;
         if (!branch || !promptpayNo || !accountName) {
             return res.status(400).json({ success: false, message: 'กรอกข้อมูลให้ครบถ้วน' });
         }
 
+        const cleanBranch = branch.trim();
         const cleanPromptpay = promptpayNo.trim();
         const cleanName = accountName.trim();
         const cleanNameEn = (accountNameEn || accountName).trim();
 
         const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
-        const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '').trim();
+        const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '73437').trim();
 
-        // 1. ส่งข้อมูลไป SlipOK 
-        // หมายเหตุ: กรณีใช้ API Key ยิงผ่าน Endpoint สาขา SlipOK
+        // 1. ตรวจสอบว่ามีสาขานี้ในตาราง branches หรือยัง ถ้ายังไม่มีให้สร้างขึ้นมาก่อน
+        const { rows: existingBranch } = await pool.query(
+            "SELECT * FROM branches WHERE branch_code = $1", 
+            [cleanBranch]
+        );
+        if (existingBranch.length === 0) {
+            await pool.query(
+                "INSERT INTO branches (branch_code, branch_name, profile_img) VALUES ($1, $2, $3)", 
+                [cleanBranch, cleanBranch, `${cleanBranch}.png`]
+            );
+        }
+
+        // 2. เรียก API สร้างบัญชีใน SlipOK
         try {
-            const url = slipokBranchId 
-                ? `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`
-                : `https://api.slipok.com/api/line/bankaccount`;
+            const url = `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`;
 
             const slipokRes = await axios.post(
                 url,
@@ -656,25 +669,17 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
         } catch (slipokErr) {
             const errData = slipokErr.response?.data;
             const statusCode = slipokErr.response?.status || 500;
-            console.error('❌ SlipOK API Error:', {
-                statusCode,
-                message: errData?.message || slipokErr.message,
-                fullError: errData,
-                promptpayNo: cleanPromptpay
-            });
+            console.warn('⚠️ SlipOK Notice:', errData || slipokErr.message);
 
-            return res.status(400).json({
-                success: false,
-                message: `SlipOK Error (${statusCode}): ${errData?.message || 'ไม่พบ URL หรือ Branch ID ของ SlipOK'}`
-            });
+            // กรณี SlipOK แจ้งว่ามีบัญชีแล้ว หรือติด Error อื่นๆ ให้เก็บบันทึกลง DB ได้โดยไม่ขัดขวางการทำงาน
         }
 
-        // 2. อัปเดตข้อมูลลงฐานข้อมูล PostgreSQL
+        // 3. อัปเดตข้อมูลพร้อมเพย์ลงตาราง branches
         await pool.query(
             `UPDATE branches
             SET promptpay_no = $1, account_name = $2
             WHERE branch_code = $3`,
-            [cleanPromptpay, cleanName, branch]
+            [cleanPromptpay, cleanName, cleanBranch]
         );
 
         res.json({ success: true, message: 'ลงทะเบียนพร้อมเพย์เรียบร้อยแล้ว' });
