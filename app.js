@@ -640,7 +640,7 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
         const cleanBranch = branch.trim();
         const cleanPromptpay = promptpayNo.trim();
         const cleanName = accountName.trim();
-        const cleanNameEn = accountNameEn.trim(); //  ดึงค่าชื่อภาษาอังกฤษ
+        const cleanNameEn = accountNameEn.trim();
 
         const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
         const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '73437').trim();
@@ -657,15 +657,15 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
             );
         }
 
-        // 2. เรียก API ไปสร้างบัญชีในหน้า Dashboard ของ SlipOK
+        // 2. เรียก API ไปสร้างบัญชีใน SlipOK Dashboard (ระบุ Branch ID ให้ถูกต้อง)
         try {
             const slipokRes = await axios.post(
-                `https://api.slipok.com/api/line/bankaccount`,
+                `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`,
                 {
-                    bank_code: '029', // 029 คือ พร้อมเพย์
+                    bank_code: '029', // 029 คือ รหัส PromptPay
                     bank_account_no: cleanPromptpay,
                     name: cleanName,
-                    name_en: cleanNameEn //  ส่งชื่อภาษาอังกฤษตามที่ SlipOK กำหนด
+                    name_en: cleanNameEn
                 },
                 {
                     headers: {
@@ -680,14 +680,15 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
             const errData = slipokErr.response?.data;
             console.error('❌ SlipOK Register Error:', errData || slipokErr.message);
 
-            // หาก SlipOK ตอบกลับ Error ให้หยุดการทำงานและส่งแจ้งเตือนกลับไปที่หน้าเว็บ
+            // หาก SlipOK ตอบกลับ Error (เช่น บัญชีมีอยู่แล้ว หรือข้อมูลไม่ผ่าน)
+            // ให้ส่งข้อความจาก SlipOK กลับไปที่หน้าเว็บ
             return res.status(400).json({
                 success: false,
                 message: `สร้างบัญชีใน SlipOK ไม่สำเร็จ: ${errData?.message || slipokErr.message}`
             });
         }
 
-        // 3. เมื่อสร้างบัญชีใน SlipOK สำเร็จ ค่อยอัปเดตข้อมูลพร้อมเพย์ลงตาราง branches
+        // 3. เมื่อสร้างบัญชีใน SlipOK สำเร็จ ค่อยอัปเดตข้อมูลลงตาราง branches
         await pool.query(
             `UPDATE branches
             SET promptpay_no = $1, account_name = $2
