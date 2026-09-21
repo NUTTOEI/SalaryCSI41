@@ -618,7 +618,7 @@ app.post('/api/member/upload-profile', (req, res) => {
     });
 });
 
-app.post('app.post('/api/admin/branch/register-promptpay', async (req, res) => {
+app.post('/api/admin/branch/register-promptpay', async (req, res) => {
     try {
         const { branch, promptpayNo, accountName, accountNameEn } = req.body;
         if (!branch || !promptpayNo || !accountName) {
