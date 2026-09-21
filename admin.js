@@ -249,7 +249,7 @@ function renderRow(m, index) {
     const statusInfo = getMemberStatus(m);
     const pill = `<span class="pill ${statusInfo.class}">${statusInfo.text}</span>`;
     const studentIdText = m.studentId ? `<div style="font-size:12px; color:#4C5FD5; font-weight:500;">รหัส: ${m.studentId}</div>` : '';
-    const subText = statusInfo.subText;
+    const subText = `${studentIdText}<div>${statusInfo.subText}</div>`;
     const historyCount = m.history ? m.history.length : 0;
     const branchBadge = `<span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; margin-left:6px;">${m.branch || 'comsci41'}</span>`;
 
@@ -267,7 +267,7 @@ function renderRow(m, index) {
         </div>
         <div class="m-text">
             <div class="m-name">${m.name} ${branchBadge}</div>
-            <div class="m-sub">${subText}</div>
+            <div class="m-sub" style="flex-direction: column; align-items: center; gap: 1px;">${subText}</div>
         </div>
         <div class="m-right">
             <div class="m-amount" data-edit-amount="${m.id}" title="คลิกเพื่อแก้ยอดของคนนี้">${safeFmtMoney(total)}</div>
