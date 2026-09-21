@@ -214,183 +214,665 @@ function render() {
     const s = computeStats();
     safeSetText("stat-collected", safeFmtMoney(s.collected));
     safeSetText("stat-target", safeFmtMoney(s.target));
-    safeSetText("stat-progress", s.pct + "%");
-
-    const progressBar = document.getElementById("progress-bar");
-    if (progressBar) progressBar.style.width = s.pct + "%";
-
     safeSetText("stat-paid", s.paid);
     safeSetText("stat-unpaid", s.unpaid);
+    safeSetText("stat-total", MEMBERS.length);
+    safeSetText("progress-pct", s.pct + "%");
+    safeSetText("summary-line", `เก็บได้แล้ว ${safeFmtMoney(s.collected)} - จ่ายแล้ว ${s.paid} คน ยังไม่จ่าย ${s.unpaid} คน จากทั้งหมด ${MEMBERS.length} คน`);
+    safeSetText("summary-projected", `ยอดเงินสะสมปัจจุบันคิดเป็น ${s.pct}% ของเป้าหมายทั้งหมด (${safeFmtMoney(s.target)})`);
 
-    renderMembersList();
+    const ring = document.getElementById("progress-ring-fg");
+    if (ring) {
+        const circumference = 2 * Math.PI * 52;
+        ring.style.strokeDasharray = circumference;
+        ring.style.strokeDashoffset = circumference * (1 - Math.min(s.pct, 100) / 100);
+    }
+
+    const list = document.getElementById("member-list");
+    if (list) {
+        const items = sortedFilteredMembers();
+        safeSetText("count-line", `แสดง ${items.length} จาก ${MEMBERS.length} คน`);
+
+        if (items.length === 0) {
+            list.innerHTML = '<div class="empty"><i class="ti ti-search-off"></i>ไม่พบสมาชิกที่ตรงกับคำค้นหา</div>';
+            return;
+        }
+        list.innerHTML = items.map(renderRow).join("");
+    }
 }
 
-function renderMembersList() {
-    const container = document.getElementById("members-list");
-    if (!container) return;
+function renderRow(m, index) {
+    const displayNum = index + 1;
+    const tint = typeof tintFor === "function" ? tintFor(m.id) : { bg: "#eef0fb", fg: "#4c5fd5" };
+    const total = Number(m.amount) || 0;
 
-    const items = sortedFilteredMembers();
-    if (items.length === 0) {
-        container.innerHTML = '<div class="no-data">ไม่มีข้อมูล</div>';
+    const statusInfo = getMemberStatus(m);
+    const pill = `<span class="pill ${statusInfo.class}">${statusInfo.text}</span>`;
+    const studentIdText = m.studentId ? `<div style="font-size:12px; color:#4C5FD5; font-weight:500;"> ${m.studentId}</div>` : '';
+    const subText = `${studentIdText}<div>${statusInfo.subText}</div>`;
+    const historyCount = m.history ? m.history.length : 0;
+    const branchBadge = `<span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; margin-left:6px;">${m.branch || 'comsci41'}</span>`;
+
+    let avatarHTML = '';
+    if (m.profileImg) {
+        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+    } else {
+        avatarHTML = displayNum;
+    }
+
+    return `
+    <div class="member-row" data-toggle-id="${m.id}">
+        <div class="m-avatar" style="background:${m.profileImg ? 'transparent' : tint.bg};color:${tint.fg}">
+            ${avatarHTML}
+        </div>
+        <div class="m-text">
+            <div class="m-name">${m.name} ${branchBadge}</div>
+            <div class="m-sub" style="flex-direction: column; align-items: center; gap: 1px;">${subText}</div>
+        </div>
+        <div class="m-right">
+            <div class="m-amount" data-edit-amount="${m.id}" title="คลิกเพื่อแก้ยอดของคนนี้">${safeFmtMoney(total)}</div>
+            ${pill}
+            
+            <button class="history-btn" data-history-id="${m.id}" title="ดูประวัติการจ่าย (${historyCount})" style="background:none; border:none; cursor:pointer; color:#777; padding:4px; margin-left:4px;">
+                <i class="ti ti-history" style="font-size: 1.2rem;"></i>
+            </button>
+            
+            <a href="detailmember.html?id=${m.id}" title="ดูรายละเอียด" onclick="event.stopPropagation();" style="display:flex; align-items:center; gap:4px; text-decoration: none; background:#EEF0FB; border:1px solid #C7CCEB; border-radius:6px; cursor:pointer; color:#4C5FD5; padding:4px 8px; font-size:12px; font-family:'Kanit'; white-space: nowrap;">
+                <i class="ti ti-calendar-event" style="font-size: 1.1rem;"></i> รายละเอียด
+            </a>
+
+            <button class="delete-btn" data-delete-id="${m.id}" title="ลบสมาชิก" style="background:none; border:none; cursor:pointer; color:#ff5252; padding:4px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"></path><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1 v3"></path></svg> 
+            </button>
+        </div>
+    </div>
+    `;
+}
+
+function startEditAmount(el) {
+    const id = Number(el.getAttribute("data-edit-amount"));
+    const m = MEMBERS.find(x => x.id === id);
+    if (!m) return;
+    el.innerHTML = `<input type="number" class="amount-input" id="edit-amount-${id}" data-amount-id="${id}" value="${m.amount}">`;
+    const input = el.querySelector("input");
+    if (input) {
+        input.focus();
+        input.select();
+    }
+}
+
+async function saveEditAmount(memberId) {
+    const inputEl = document.getElementById(`edit-amount-${memberId}`);
+    if (!inputEl) return;
+    const newAmount = inputEl.value;
+
+    try {
+        const response = await fetch(`/api/admin/members/${memberId}/amount`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: Number(newAmount) })
+        });
+
+        if (response.ok) {
+            await loadFromStorage();
+        }
+    } catch (error) {
+        console.error('Error updating amount:', error);
+    }
+}
+
+document.addEventListener("click", (e) => {
+    const saveTargetBtn = e.target.closest("#btn-save-target");
+    if (saveTargetBtn) {
+        saveTargetAmount();
         return;
     }
 
-    container.innerHTML = items.map(m => {
-        const isPaid = isMemberPaidCurrent(m);
-        const paidBadge = isPaid ? '<span class="badge badge-success">จ่ายแล้ว</span>' : '<span class="badge badge-danger">ค้างชำระ</span>';
-        return `
-            <div class="member-row ${isPaid ? 'paid' : 'unpaid'}">
-                <div class="member-info">
-                    <div class="member-avatar">
-                        ${m.profileImg ? `<img src="${m.profileImg}" alt="${m.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ccc%22/></svg>'">` : `<div class="avatar-placeholder">👤</div>`}
-                    </div>
-                    <div class="member-details">
-                        <div class="member-name">${m.name}</div>
-                        <div class="member-meta">ID: ${m.studentId} | ${safeFmtMoney(m.amount)}/เดือน</div>
-                    </div>
-                </div>
-                <div class="member-status">${paidBadge}</div>
-                <div class="member-actions">
-                    <button onclick="togglePaid(${m.id})" class="btn-toggle">
-                        ${isPaid ? '❌ ยกเลิก' : '✅ ชำระ'}
-                    </button>
-                    <button onclick="deleteMember(${m.id})" class="btn-delete">🗑️</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-async function loadBranchTitle() {
-    const studentId = sessionStorage.getItem("admin_student_id");
-    if (!studentId) return;
-
-    try {
-        const res = await fetch(`/api/admin/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ studentId })
-        });
-        const data = await res.json();
-        if (data.success) {
-            const branchName = data.branchName || data.branch;
-            safeSetText("branch-title", branchName);
-            sessionStorage.setItem("admin_branch_name", branchName);
-        }
-    } catch (err) {
-        console.error("Error loading branch title:", err);
-    }
-}
-
-async function loadFromStorage() {
-    const studentId = sessionStorage.getItem("admin_student_id");
-    if (!studentId) {
-        window.location.href = "/admin.html";
+    const resetBtn = e.target.closest("#reset-all-btn");
+    if (resetBtn) {
+        openResetModal();
         return;
     }
 
-    try {
-        const res = await fetch(`/api/members?studentId=${studentId}`);
-        MEMBERS = await res.json();
-        
-        const branchRes = await fetch(`/api/admin/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ studentId })
-        });
-        const branchData = await branchRes.json();
-        if (branchData.success) {
-            sessionStorage.setItem("admin_branch", branchData.branch);
-            sessionStorage.setItem("admin_branch_name", branchData.branchName || branchData.branch);
-            sessionStorage.setItem("admin_name", branchData.name);
-        }
-        
-        render();
-    } catch (err) {
-        console.error("Error loading data:", err);
-    }
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-    loadFromStorage();
-
-    // Search and Filter
-    const searchInput = document.getElementById("search-input");
-    if (searchInput) {
-        searchInput.addEventListener("input", (e) => {
-            setQuery(e.target.value);
-        });
+    const confirmResetBtn = e.target.closest("#btn-confirm-reset");
+    if (confirmResetBtn) {
+        resetAllPayments();
+        return;
     }
 
-    const filterBtns = document.querySelectorAll(".filter-btn");
-    filterBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-            filterBtns.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            setFilter(btn.dataset.filter);
-        });
-    });
-
-    const sortSelect = document.getElementById("sort-select");
-    if (sortSelect) {
-        sortSelect.addEventListener("change", (e) => {
-            setSort(e.target.value);
-        });
+    if (e.target.classList.contains("modal-overlay")) {
+        closeResetModal();
+        closeTargetModal();
     }
 
-    // Add Member
-    const addMemberForm = document.getElementById("add-member-form");
-    if (addMemberForm) {
-        addMemberForm.addEventListener("submit", async (e) => {
+    const deleteBtn = e.target.closest("[data-delete-id]");
+    if (deleteBtn) {
+        e.stopPropagation();
+        deleteMember(Number(deleteBtn.getAttribute("data-delete-id")));
+        return;
+    }
+
+    const historyBtn = e.target.closest("[data-history-id]");
+    if (historyBtn) {
+        e.stopPropagation();
+        viewHistory(Number(historyBtn.getAttribute("data-history-id")));
+        return;
+    }
+
+    const amountEl = e.target.closest("[data-edit-amount]");
+    if (amountEl && !e.target.closest(".amount-input")) {
+        startEditAmount(amountEl);
+        return;
+    }
+
+    const filterBtn = e.target.closest("[data-filter]");
+    if (filterBtn) {
+        document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active"));
+        filterBtn.classList.add("active");
+        setFilter(filterBtn.getAttribute("data-filter"));
+        return;
+    }
+
+    const sortBtn = e.target.closest("[data-sort]");
+    if (sortBtn) {
+        document.querySelectorAll("[data-sort]").forEach(b => b.classList.remove("active"));
+        setSort(sortBtn.getAttribute("data-sort"));
+        return;
+    }
+
+    const row = e.target.closest("[data-toggle-id]");
+    if (row && !e.target.closest(".amount-input") && !e.target.closest("button") && !e.target.closest("a")) {
+        togglePaid(Number(row.getAttribute("data-toggle-id")));
+        return;
+    }
+});
+
+document.addEventListener("focusout", (e) => {
+    const input = e.target.closest(".amount-input");
+    if (input) {
+        const memberId = Number(input.getAttribute("data-amount-id"));
+        saveEditAmount(memberId);
+    }
+});
+
+document.addEventListener("keydown", (e) => {
+    const targetModal = document.getElementById("target-modal");
+
+    if (e.key === "Escape") {
+        closeTargetModal();
+        closeResetModal();
+    }
+
+    if (targetModal && targetModal.style.display === "flex") {
+        if (e.key === "Enter") {
             e.preventDefault();
-            const input = document.getElementById("member-name-input");
-            if (input) {
-                await addMember(input.value);
-                input.value = "";
+            saveTargetAmount();
+        }
+    }
+});
+
+document.addEventListener("DOMContentLoaded",  () => {
+    const searchInput = document.getElementById("search-input");
+    const rateInput = document.getElementById("rate-input");
+    const applyRateBtn = document.getElementById("apply-rate-btn");
+    const addBtn = document.getElementById("add-member-btn");
+    const nameInput = document.getElementById("new-name-input");
+    const exportExcelBtn = document.getElementById("export-excel-btn");
+    const statTargetBtn = document.getElementById("stat-target");
+
+    if (searchInput) searchInput.addEventListener("input", (e) => setQuery(e.target.value));
+    if (rateInput) rateInput.addEventListener("input", (e) => setRatePreview(e.target.value));
+    if (applyRateBtn) applyRateBtn.addEventListener("click", applyRateToAll);
+
+    if (addBtn && nameInput) {
+        addBtn.addEventListener("click", () => {
+            addMember(nameInput.value);
+            nameInput.value = "";
+            nameInput.focus();
+        });
+        nameInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                addBtn.click();
             }
         });
     }
 
-    const rateInput = document.getElementById("rate-input");
-    if (rateInput) {
-        rateInput.addEventListener("input", (e) => {
-            setRatePreview(e.target.value);
-            document.getElementById("rate-preview").textContent = state.ratePreview;
+    if (exportExcelBtn) exportExcelBtn.addEventListener("click", exportMembersToExcel);
+    if (statTargetBtn) statTargetBtn.addEventListener("click", openTargetModal);
+});
+
+function viewHistory(memberId) {
+   const member = MEMBERS.find(m => Number(m.id) === Number(memberId));
+   if (!member) return;
+
+   safeSetText("modal-member-name", `ประวัติชำระเงิน: ${member.name}`);
+
+   const listEl = document.getElementById("modal-history-list");
+   if (listEl) {
+        listEl.innerHTML = "";
+        let history = member.history;
+        if (typeof history === "string") {
+            try { history = JSON.parse(history); } catch(e) { history = []; }
+        }
+
+        if (Array.isArray(history) && history.length > 0) {
+            history.forEach((h, index) => {
+                const li = document.createElement("li");
+                li.style.marginBottom = "8px";
+                li.innerText = `ครั้งที่ ${index + 1}: วันที่ ${h.date || '-'} - ชำระ ${safeFmtMoney(h.amount)} (${h.method || 'โอนเงิน'})`;
+                listEl.appendChild(li);
+            });
+        } else {
+            listEl.innerHTML = "<li>ยังไม่มีประวัติการชำระเงิน</li>";
+        }
+   }
+
+   const modal = document.getElementById("history-modal");
+   if (modal) modal.style.display = "flex";
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById("history-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function loadFromStorage() {
+    try {
+        const adminBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+
+        const targetRes = await fetch(`/api/settings/target?branch=${adminBranch}`, { cache: "no-store" });
+        if (targetRes.ok) {
+            const targetData = await targetRes.json();
+            TARGET_AMOUNT = Number(targetData.target) || 4000;
+        }
+
+        const url = adminBranch ? `/api/members?branch=${adminBranch}` : "/api/members";
+        const response = await fetch(url, { cache: "no-store" });
+        if (response.ok) {
+            MEMBERS = await response.json();
+        }
+        render();
+    } catch (e) {
+        console.error("ดึงข้อมูลจาก Server/MySQL ล้มเหลว:", e);
+    }
+}
+
+function openTargetModal() {
+    const modal = document.getElementById("target-modal");
+    const input = document.getElementById("target-modal-input");
+    if (modal && input) {
+        input.value = TARGET_AMOUNT;
+        modal.style.display = "flex";
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 50);
+    }
+}
+
+function closeTargetModal() {
+    const modal = document.getElementById("target-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function saveTargetAmount() {
+    const inputEl = document.getElementById('target-modal-input');
+    const targetValue = inputEl ? inputEl.value : null;
+
+    if (!targetValue || isNaN(Number(targetValue))) {
+        alert("กรุณากรอกจำนวนเงินเพื่อตั้งเป้าหมาย");
+        return;
+    } 
+
+    closeTargetModal();
+    showLoading("กำลังบันทึกเป้าหมาย...");
+        
+    try {
+        const adminBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+        const response = await fetch('/api/settings/target', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                branch: adminBranch,
+                target: Number(targetValue) 
+            })
+        });
+
+        if (response.ok) {
+            await loadFromStorage();
+            showSuccess("บันทึกเป้าหมายสำเร็จ");
+        } else {
+            hideLoading();
+            alert("บันทึกไม่สำเร็จ: เซิร์ฟเวอร์ตอบกลับผิดพลาด");
+        }
+    } catch (error) {
+        console.error('Error saving target:', error);
+        hideLoading();
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+    }
+}
+
+function getCollectionMode() {
+    return localStorage.getItem("fund-dashboard-mode") || "month";
+}
+
+function setCollectionMode(mode) {
+    if (mode === "week") return;
+    localStorage.setItem("fund-dashboard-mode", mode);
+    updateModeUI(mode);
+    render();
+}
+
+function updateModeUI(mode) {
+    const monthBtn = document.getElementById("mode-month-btn");
+    const weekBtn = document.getElementById("mode-week-btn");
+
+    if (monthBtn && weekBtn) {
+        monthBtn.classList.toggle("active", mode === "month");
+        weekBtn.classList.toggle("active", mode === "week");
+    }
+}
+
+function initAdminApp() {
+    localStorage.setItem("fund-dashboard-mode", "month");
+    updateModeUI(getCollectionMode());
+}
+
+function getMemberStatus(m) {
+    const mode = localStorage.getItem("fund-dashboard-mode") || "month";
+
+    if (mode === "month") {
+        const currentMonth = typeof getActiveMonthIndex === "function" ? getActiveMonthIndex() : new Date().getMonth();
+        const paidMonths = parseArrayField(m.paidMonths, 12);
+
+        if (paidMonths[currentMonth]) {
+            return {
+                status: "paid",
+                text: "จ่ายแล้ว",
+                class: "paid",
+                subText: "ชำระเรียบร้อย"
+            };
+        }
+
+        return {
+            status: "unpaid",
+            text: "ค้างชำระ",
+            class: "unpaid",
+            subText: `ยอดชำระประจำเดือน ${safeFmtMoney(m.amount)} บาท`
+        };
+    } else {
+        const activeWeek = typeof getActiveWeekIndex === "function" ? getActiveWeekIndex() : Number(localStorage.getItem("fund-dashboard-active-week")) || 0;
+        const totalWeeks = typeof WEEKS_LIST !== "undefined" ? WEEKS_LIST.length : 52;
+        const paidWeeks = parseArrayField(m.paidWeeks, totalWeeks);
+
+        if (paidWeeks[activeWeek]) {
+            return {
+                status: "paid",
+                text: "จ่ายแล้ว",
+                class: "paid",
+                subText: "ชำระเรียบร้อย"
+            };
+        }
+
+        return {
+            status: "unpaid",
+            text: "ค้างชำระ",
+            class: "unpaid",
+            subText: `ยอดชำระประจำสัปดาห์ ${safeFmtMoney(m.amount)} บาท`
+        };
+    }
+}
+
+async function loadBranchTitle() {
+    const titleEl = document.getElementById("branch-title");
+    if (!titleEl) return;
+    const branch = sessionStorage.getItem("admin_branch");
+    if (!branch) return;
+    
+    try {
+        const response = await fetch(`/api/admin/branch/name?branch=${branch}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.branchName) {
+                titleEl.textContent = data.branchName;
+                sessionStorage.setItem("admin_branch_name", data.branchName);
+            }
+        }
+    } catch (error) {
+        console.error("ไม่สามารถโหลดชื่อสาขา:", error);
+        titleEl.textContent = branch;
+    }
+}
+
+
+// เข้าสู่ระบบแอดมินผ่าน MySQL
+async function processAdminLogin() {
+    const inputEl = document.getElementById("login-student-id");
+    const studentId = inputEl ? inputEl.value.trim() : "";
+
+    if (!studentId) {
+        showLoginError("กรุณากรอกรหัสนักศึกษา");
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ studentId })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            showLoginError(data.message || "ไม่พบรหัสนักศึกษา");
+            return;
+        }
+
+        sessionStorage.setItem("admin_student_id", data.studentId);
+        sessionStorage.setItem("admin_branch", data.branch);
+        sessionStorage.setItem("admin_name", data.name || "");
+        sessionStorage.setItem("admin_branch_name", data.branchName);
+
+        const loginModal = document.getElementById("login-modal");
+        const mainDashboard = document.getElementById("main-dashboard");
+
+        if (loginModal) loginModal.style.display = "none";
+        if (mainDashboard) mainDashboard.style.display = "block";
+        
+        applyAdminBranch(data.branch);
+        loadFromStorage();
+    } catch (err) {
+        showLoginError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+    }
+}
+
+// ลงทะเบียนแอดมินใหม่เข้า MySQL
+async function processAdminRegister(e) {
+    if (e) e.preventDefault();
+    const studentId = document.getElementById("reg-student-id")?.value.trim();
+    const name = document.getElementById("reg-name")?.value.trim();
+    const branch = document.getElementById("reg-branch")?.value.trim();
+
+    if (!studentId || !name || !branch) {
+        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+        return;
+    }
+
+    // 1. เรียกแสดงวงกลมหมุนรอโหลด
+    showLoading("กำลังลงทะเบียน...");
+
+    try {
+        const response = await fetch("/api/admin/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ studentId, name, branch })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            sessionStorage.setItem("admin_student_id", studentId);
+            sessionStorage.setItem("admin_branch", branch);
+
+            // 2. แสดงติ๊กถูกสีเขียวสำเร็จ พร้อม Callback ปิด Modal หลังจบอนิเมชัน
+            showSuccess("ลงทะเบียนสำเร็จ!", 1800, () => {
+                const loginModal = document.getElementById("login-modal");
+                const mainDashboard = document.getElementById("main-dashboard");
+                if (loginModal) loginModal.style.display = "none";
+                if (mainDashboard) mainDashboard.style.display = "block";
+
+                applyAdminBranch(branch);
+
+                if (document.getElementById("login-student-id")) {
+                    document.getElementById("login-student-id").value = studentId;
+                }
+                toggleAuthView('login');
+            });
+        } else {
+            hideLoading();
+            alert("ลงทะเบียนไม่สำเร็จ: " + (data.message || "เกิดข้อผิดพลาด"));
+        }
+    } catch (err) {
+        hideLoading();
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+    }
+}
+
+function showLoginError(msg) {
+    const errorEl = document.getElementById("login-error");
+    const textEl = document.getElementById("login-error-text");
+    if (textEl) textEl.textContent = msg;
+    if (errorEl) errorEl.style.display = "flex";
+}
+
+function applyAdminBranch(branch) {
+    const filterSelect = document.getElementById("filter-branch-select");
+    if (filterSelect) {
+        filterSelect.value = branch;
+        filterSelect.disabled = true;
+    }
+
+    const newBranchSelect = document.getElementById("new-branch-select");
+    if (newBranchSelect) {
+        newBranchSelect.value = branch;
+        newBranchSelect.disabled = true;
+    }
+    loadBranchAvatar(branch);
+    loadFromStorage();
+}
+
+function initAdminAuth() {
+    const savedBranch = sessionStorage.getItem("admin_branch");
+    const loginModal = document.getElementById("login-modal");
+    const mainDashboard = document.getElementById("main-dashboard");
+
+    if (savedBranch) {
+        if (loginModal) loginModal.style.display = "none";
+        if (mainDashboard) mainDashboard.style.display = "block";
+        applyAdminBranch(savedBranch);
+    } else {
+        if (loginModal) loginModal.style.display = "flex";
+        if (mainDashboard) mainDashboard.style.display = "none";
+    }
+
+    const submitBtn = document.getElementById("btn-login-submit");
+    const inputEl = document.getElementById("login-student-id");
+
+    if (submitBtn) submitBtn.addEventListener("click", processAdminLogin);
+    if (inputEl) {
+        inputEl.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") processAdminLogin();
         });
     }
+}
 
-    const applyRateBtn = document.getElementById("apply-rate-btn");
-    if (applyRateBtn) {
-        applyRateBtn.addEventListener("click", applyRateToAll);
+async function loadBranchAvatar(branch) {
+    if (!branch) return;
+    try {
+        const response = await fetch(`/api/branch/profile?branch=${branch}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.avatarUrl) {
+                const avatarImg = document.getElementById('branch-avatar-img');
+                const headerAvatarImg = document.getElementById('header-avatar-img');
+                const settingImg = document.getElementById('settings-avatar-preview');
+                const timestampedUrl = `${data.avatarUrl}?t=${Date.now()}`;
+
+                if (avatarImg) avatarImg.src = timestampedUrl;
+                if (headerAvatarImg) headerAvatarImg.src = timestampedUrl;
+                if (settingImg) settingImg.src = timestampedUrl;
+            }
+        }
+    } catch (err) {
+        console.error("ไม่สามารถดึงรูปโปรไฟล์สาขาได้:", err);
     }
+}
 
-    // Logout
-    const logoutBtn = document.getElementById("logout-btn");
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-            sessionStorage.clear();
-            window.location.href = "/admin.html";
-        });
-    }
+// Event Listeners สำหรับ UI Components
+document.addEventListener('DOMContentLoaded', async() => {
+    await loadBranchTitle();
+    initAdminApp();
+    initAdminAuth();
 
-    // Dropdown
-    const dropdown = document.getElementById("dropdown-menu");
-    const dropdownBtn = document.getElementById("dropdown-btn");
-    const closeDropdownBtn = document.getElementById("close-dropdown-btn");
+    const menuBtn = document.getElementById("menu-toggle-btn");
+    const dropdown = document.getElementById("profile-dropdown");
 
-    dropdownBtn?.addEventListener("click", () => {
+    menuBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
         dropdown?.classList.toggle("active");
-    });
 
-    closeDropdownBtn?.addEventListener("click", () => {
-        dropdown?.classList.remove("active");
+        const brnachDisplay = document.getElementById("dropdown-branch-display");
+        if (brnachDisplay) {
+            brnachDisplay.textContent = sessionStorage.getItem("admin_branch_name") || document.getElementById("branch-title")?.textContent || "BWBS";
+        }
     });
 
     document.addEventListener("click", (e) => {
-        if (!e.target.closest(".dropdown") && !e.target.closest("#dropdown-btn")) {
-            dropdown?.classList.remove("active");
+        if (dropdown && !dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
+            dropdown.classList.remove("active");
         }
     });
+
+    const megaTargetBtn = document.getElementById('mega-target-btn');
+    megaTargetBtn?.addEventListener('click', () => {
+        dropdown?.classList.remove("active");
+        if (typeof openTargetModal === "function") openTargetModal();
+    });
+
+    const megaExportBtn = document.getElementById('mega-export-btn');
+    megaExportBtn?.addEventListener('click', () => {
+        dropdown?.classList.remove("active");
+        if (typeof exportMembersToExcel === "function") exportMembersToExcel();
+    });
+
+    // Logout Modal
+    const logoutBtn = document.getElementById("logout-btn");
+    const logoutModal = document.getElementById("logout-confirm-modal");
+    const cancelLogoutBtn = document.getElementById("cancel-logout-btn");
+    const confirmLogoutBtn = document.getElementById("confirm-logout-btn");
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            if (logoutModal) logoutModal.classList.add("active");
+        });
+    }
+
+    if (cancelLogoutBtn) {
+        cancelLogoutBtn.addEventListener("click", () => {
+            if (logoutModal) logoutModal.classList.remove("active");
+        });
+    }
+
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener("click", () => {
+            sessionStorage.removeItem("admin_student_id");
+            sessionStorage.removeItem("admin_branch");
+            sessionStorage.removeItem("admin_name");
+            location.reload();
+        });
+    }
 
     // Settings Profile Image Upload Modal
     const openSettingBtn = document.getElementById('open-setting-btn');
@@ -476,7 +958,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             selectedFile = null;
-            await loadBranchTitle();
+            await loadBranchTitle(); // โหลดชื่อสาขาและรีเฟรชหน้าจอ
             showSuccess("บันทึกการตั้งค่าสำเร็จ!");
         } catch (error) {
             console.error('Update Error:', error);
@@ -485,25 +967,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    /* ====================================================================
-       ✅ PromptPay Modal - แก้ไขให้ครบถ้วน
-       ==================================================================== */
     const promptpayModal = document.getElementById('promptpay-modal');
     const openPromptpayBtn = document.getElementById('open-promptpay-btn');
     const closePromptpayBtn = document.getElementById('close-promptpay-btn');
     const savePromptpayBtn = document.getElementById('save-promptpay-btn');
 
-    // ✅ เปิด PromptPay Modal พร้อมตรวจสอบข้อมูล
     openPromptpayBtn?.addEventListener('click', async () => {
         dropdown?.classList.remove("active");
-        const currentBranch = (sessionStorage.getItem("admin_branch") || "").trim();
-        
-        console.log('📋 เปิด PromptPay Modal สำหรับสาขา:', currentBranch);
-
-        if (!currentBranch) {
-            alert("⚠️ เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา\nกรุณาเข้าสู่ระบบใหม่");
-            return;
-        }
+        const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
 
         try {
             const res = await fetch(`/api/branches/${currentBranch}`);
@@ -513,101 +984,62 @@ document.addEventListener("DOMContentLoaded", function() {
                 const nameInput = document.getElementById('promptpay-name-input');
                 if (noInput) noInput.value = data.promptpay_no || '';
                 if (nameInput) nameInput.value = data.account_name || '';
-                console.log('✅ โหลดข้อมูล PromptPay ที่มีอยู่:', data);
             }
         } catch (e) {
-            console.error("❌ Error loading branch info:", e);
+            console.error("Error loading branch info:", e);
         }
 
         if (promptpayModal) promptpayModal.style.display = 'flex';
     });
 
-    // ✅ ปิด PromptPay Modal
     closePromptpayBtn?.addEventListener('click', () => {
         if (promptpayModal) promptpayModal.style.display = 'none';
     });
 
-    // ✅ บันทึก PromptPay พร้อมการตรวจสอบโดยละเอียด
     savePromptpayBtn?.addEventListener('click', async () => {
-        // ดึงและ trim ข้อมูลทั้งหมด
-        const currentBranch = (sessionStorage.getItem("admin_branch") || "").trim();
-        const promptpayNo = (document.getElementById('promptpay-no-input')?.value || "").trim();
-        const accountName = (document.getElementById('promptpay-name-input')?.value || "").trim();
+        const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
+        const promptpayNo = document.getElementById('promptpay-no-input')?.value.trim();
+        const accountName = document.getElementById('promptpay-name-input')?.value.trim();
 
-        // 🔍 บันทึก debug log
-        console.log('📤 PromptPay Save Attempt:', {
-            currentBranch: currentBranch || '[EMPTY]',
-            promptpayNo: promptpayNo || '[EMPTY]',
-            accountName: accountName || '[EMPTY]',
-            timestamp: new Date().toISOString()
-        });
-
-        // ✅ ตรวจสอบแต่ละฟิลด์อย่างละเอียด
-        if (!currentBranch) {
-            alert("❌ เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา\nกรุณาเข้าสู่ระบบใหม่");
-            console.error('❌ Branch is empty:', { currentBranch });
-            return;
-        }
-
-        if (!promptpayNo) {
-            alert("❌ กรุณากรอกเลขที่พร้อมเพย์ให้ครบถ้วน");
-            console.error('❌ PromptPay number is empty');
-            return;
-        }
-
-        if (!accountName) {
-            alert("❌ กรุณากรอกชื่อบัญชีให้ครบถ้วน");
-            console.error('❌ Account name is empty');
-            return;
-        }
-
-        // ✅ ตรวจสอบรูปแบบเลขพร้อมเพย์
-        if (!/^\d+$/.test(promptpayNo) && !/^\+66\d+$/.test(promptpayNo)) {
-            alert("❌ เลขพร้อมเพย์ต้องเป็นตัวเลข (เช่น 0812345678)");
-            console.error('❌ Invalid PromptPay format:', promptpayNo);
+        if (!promptpayNo || !accountName) {
+            alert("กรุณากรอกข้อมูลให้ครบ");
             return;
         }
 
         if (promptpayModal) promptpayModal.style.display = 'none';
-        showLoading("⏳ กำลังลงทะเบียนพร้อมเพย์...");
+        showLoading("กำลังลงทะเบียนพร้อมเพย์...");
 
         try {
-            const payload = {
-                branch: currentBranch,
-                promptpayNo,
-                accountName
-            };
-
-            console.log('📨 กำลังส่ง payload:', payload);
-
             const response = await fetch('/api/admin/branch/register-promptpay', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    branch: currentBranch,
+                    promptpayNo,
+                    accountName
+                })
             });
 
             const result = await response.json();
-            
-            console.log('📥 ได้รับ Response:', { status: response.status, body: result });
-
-            if (response.ok && result.success) {
-                showSuccess("✅ ลงทะเบียนพร้อมเพย์สำเร็จ");
+            if (result.success) {
+                showSuccess("ลงทะเบียนพร้อมเพย์สำเร็จ");
             } else {
                 hideLoading();
-                const errorMsg = result.message || result.error || "ไม่สามารถบันทึกได้";
-                alert("❌ เกิดข้อผิดพลาด:\n" + errorMsg);
-                console.error('❌ Save failed:', result);
+                alert("เกิดข้อผิดพลาด: " + (result.message || "ไม่สามารถบันทึกได้"));
             }
         } catch (error) {
             hideLoading();
-            console.error("❌ Network/Request Error:", error);
-            alert("❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้\n" + error.message);
+            console.error("Save Promptpay Error: ", error);
+            alert("Error501")
         }
-    });
+    })
 });
 
-// ✅ แสดงวงกลมหมุนรอโหลด
-function showLoading(message = "⏳ กำลังโหลดข้อมูล...") {
+
+
+
+// แสดงวงกลมหมุนรอโหลด
+function showLoading(message = "กำลังโหลดข้อมูล...") {
     const modal = document.getElementById("loading-modal");
     const spinnerBox = document.getElementById("loading-spinner-box");
     const successBox = document.getElementById("loading-success-box");
@@ -621,8 +1053,8 @@ function showLoading(message = "⏳ กำลังโหลดข้อมู�
     modal.style.display = "flex";
 }
 
-// ✅ เปลี่ยนเป็นเครื่องหมายติ๊กถูกสำเร็จ
-function showSuccess(message = "✅ สำเร็จ!", duration = 1400, callback = null) {
+// เปลี่ยนเป็นเครื่องหมายติ๊กถูกสำเร็จ
+function showSuccess(message = "สำเร็จ!", duration = 1400, callback = null) {
     const modal = document.getElementById("loading-modal");
     const spinnerBox = document.getElementById("loading-spinner-box");
     const successBox = document.getElementById("loading-success-box");
@@ -648,8 +1080,9 @@ function showSuccess(message = "✅ สำเร็จ!", duration = 1400, callb
     }, duration);
 }
 
-// ✅ ปิด Modal โหลดกรณีเกิด Error
+// ปิด Modal โหลดกรณีเกิด Error
 function hideLoading() {
     const modal = document.getElementById("loading-modal");
     if (modal) modal.style.display = "none";
 }
+
