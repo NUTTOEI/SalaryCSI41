@@ -633,17 +633,13 @@ app.post('/api/member/upload-profile', (req, res) => {
 app.post('/api/admin/branch/register-promptpay', async (req, res) => {
     try {
         const { branch, promptpayNo, accountName, accountNameEn } = req.body;
-        if (!branch || !promptpayNo || !accountName || !accountNameEn) {
-            return res.status(400).json({ success: false, message: 'กรอกข้อมูลให้ครบถ้วน (รวมถึงชื่อภาษาอังกฤษ)' });
+        if (!branch || !promptpayNo || !accountName) {
+            return res.status(400).json({ success: false, message: 'กรอกข้อมูลให้ครบถ้วน' });
         }
 
         const cleanBranch = branch.trim();
         const cleanPromptpay = promptpayNo.trim();
         const cleanName = accountName.trim();
-        const cleanNameEn = accountNameEn.trim();
-
-        const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
-        const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '73437').trim();
 
         // 1. ตรวจสอบว่ามีสาขานี้ในตาราง branches หรือยัง ถ้ายังไม่มีให้สร้างขึ้นมาก่อน
         const { rows: existingBranch } = await pool.query(
@@ -657,38 +653,7 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
             );
         }
 
-        // 2. เรียก API ไปสร้างบัญชีใน SlipOK Dashboard (ระบุ Branch ID ให้ถูกต้อง)
-        try {
-            const slipokRes = await axios.post(
-                `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`,
-                {
-                    bank_code: '029', // 029 คือ รหัส PromptPay
-                    bank_account_no: cleanPromptpay,
-                    name: cleanName,
-                    name_en: cleanNameEn
-                },
-                {
-                    headers: {
-                        'x-authorization': apiKey,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            console.log('✅ SlipOK Register Success:', slipokRes.data);
-        } catch (slipokErr) {
-            const errData = slipokErr.response?.data;
-            console.error('❌ SlipOK Register Error:', errData || slipokErr.message);
-
-            // หาก SlipOK ตอบกลับ Error (เช่น บัญชีมีอยู่แล้ว หรือข้อมูลไม่ผ่าน)
-            // ให้ส่งข้อความจาก SlipOK กลับไปที่หน้าเว็บ
-            return res.status(400).json({
-                success: false,
-                message: `สร้างบัญชีใน SlipOK ไม่สำเร็จ: ${errData?.message || slipokErr.message}`
-            });
-        }
-
-        // 3. เมื่อสร้างบัญชีใน SlipOK สำเร็จ ค่อยอัปเดตข้อมูลลงตาราง branches
+        // 2. อัปเดตข้อมูลพร้อมเพย์ลงในตาราง branches ของระบบเราโดยตรง
         await pool.query(
             `UPDATE branches
             SET promptpay_no = $1, account_name = $2
@@ -696,7 +661,10 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
             [cleanPromptpay, cleanName, cleanBranch]
         );
 
-        res.json({ success: true, message: 'ลงทะเบียนพร้อมเพย์และสร้างบัญชีใน SlipOK เรียบร้อยแล้ว' });
+        res.json({ 
+            success: true, 
+            message: 'ลงทะเบียนพร้อมเพย์และบันทึกข้อมูลเข้าสู่ระบบเรียบร้อยแล้ว' 
+        });
     } catch (err) {
         console.error('Register Promptpay Server Error:', err);
         res.status(500).json({ success: false, message: err.message });
