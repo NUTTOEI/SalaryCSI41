@@ -1000,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', async() => {
         const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
         const promptpayNo = document.getElementById('promptpay-no-input')?.value.trim();
         const accountName = document.getElementById('promptpay-name-input')?.value.trim();
+        const accountNameEn = document.getElementById('promptpay-name-en-input')?.value.trim();
 
         if (!promptpayNo || !accountName) {
             alert("กรุณากรอกข้อมูลให้ครบ");
@@ -1016,7 +1017,8 @@ document.addEventListener('DOMContentLoaded', async() => {
                 body: JSON.stringify({
                     branch: currentBranch,
                     promptpayNo,
-                    accountName
+                    accountName,
+                    accountNameEn
                 })
             });
 
