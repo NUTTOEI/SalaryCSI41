@@ -310,7 +310,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
-        // 1. ดึงข้อมูลสาขาและบัญชีผู้รับของสมาชิกคนนี้จาก Database
+        // 1. ดึงข้อมูลบัญชีพร้อมเพย์ และ ชื่อผู้รับ ของสาขาที่สมาชิกคนนี้สังกัดอยู่
         let targetAccountName = "";
         let targetPromptPay = "";
         
@@ -328,8 +328,9 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             }
         }
 
+        // 2. ส่งสลิปไปให้ SlipOK ตรวจสอบและอ่านข้อมูล
         const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
-        const branchId = '73437'; // SlipOK Branch ID
+        const branchId = (process.env.SLIPOK_BRANCH_ID || '73437').trim(); 
         const formData = new FormData();
         formData.append('files', req.file.buffer, { filename: req.file.originalname || 'slip.jpg', contentType: req.file.mimetype });
         formData.append('log', 'true');
@@ -343,42 +344,53 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         const slipData = result.data;
         const transferorName = String(slipData.sender?.name || slipData.sender?.displayName || slipData.sender?.account?.name || '').trim();
+        const receiverName = String(slipData.receiver?.name || slipData.receiver?.displayName || '').trim();
 
+        // 3. ตรวจสอบยอดเงิน
         if (parseFloat(slipData.amount) !== expectedAmount) {
             return res.status(400).json({ status: 'fail', message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท` });
         }
 
-        const receiverName = slipData.receiver?.name || '';
-        // if (targetAccountName && targetAccountName.trim() !== '') {
-        //     const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim();
-        //     const firstName = cleanTarget.split(/\s+/)[0]?.toLowerCase() || '';
+        // 4. ตรวจสอบชื่อผู้รับ (เช็กว่าโอนเข้าบัญชี Admin ของสาขานี้จริงไหม)
+        if (targetAccountName && targetAccountName.trim() !== '') {
+            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim().toLowerCase();
+            const cleanReceiver = receiverName.toLowerCase();
 
-        //     const cleanReceiver = receiverName.toLowerCase();
+            // นำคำแรกของชื่อเปรียบเทียบ
+            const firstName = cleanTarget.split(/\s+/)[0] || '';
+            
+            if (firstName !== '' && !cleanReceiver.includes(firstName)) {
+                return res.status(400).json({ 
+                    status: 'fail', 
+                    message: `สลิปไม่ถูกต้อง! ต้องโอนเข้าบัญชี: ${targetAccountName} เท่านั้น (ผู้รับในสลิปคือ: ${receiverName || 'ไม่ทราบชื่อ'})` 
+                });
+            }
+        }
 
-        //     // เช็กว่ามีข้อความส่วนใดส่วนหนึ่งซ้อนทับกันหรือไม่
-        //     const isNameMatch = firstName !== '' && cleanReceiver.includes(firstName);
-
-        //     if (!isNameMatch) {
-        //         return res.status(400).json({ 
-        //             status: 'fail', 
-        //             message: `บัญชีผู้รับไม่ถูกต้อง! สลิปนี้ต้องโอนเข้าบัญชี: ${targetAccountName}` 
-        //         });
-        //     }
-        // }
-
+        // 5. ป้องกันการส่งสลิปซ้ำ (Duplicate TransRef)
         const transRef = slipData.transRef;
         const { rows: existing } = await pool.query('SELECT trans_ref FROM processed_slips WHERE trans_ref = $1', [transRef]);
         if (existing.length > 0) return res.status(400).json({ status: 'fail', message: 'สลิปนี้เคยถูกนำมาใช้งานแล้ว' });
 
         await pool.query('INSERT INTO processed_slips (trans_ref) VALUES ($1)', [transRef]);
 
-        const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนได้รับการชำระเงินสำเร็จ!\n👤 ผู้รับ: ${receiverName || 'ไม่ระบุ'}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
+        // 6. ส่งข้อความแจ้งเตือนผ่าน LINE Notify / LINE Official
+        const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนชำระเงินสำเร็จ!\n👤 บัญชีผู้รับ: ${receiverName || targetAccountName}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
 
-        if (LINE_ACCESS_TOKEN && LINE_TARGET_IDS.length > 0) {
-            await axios.post('https://api.line.me/v2/bot/message/multicast', 
-                { to: LINE_TARGET_IDS.filter(Boolean), messages: [{ type: 'text', text: messageText }] },
-                { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` } }
-            );
+        if (LINE_ACCESS_TOKEN) {
+            // กรองเอาเฉพาะ ID ที่มีค่าจริงป้องกัน LINE API พัง
+            const targetIds = LINE_TARGET_IDS.filter(id => id && id.trim() !== '');
+            
+            for (const targetId of targetIds) {
+                try {
+                    await axios.post('https://api.line.me/v2/bot/message/push', 
+                        { to: targetId, messages: [{ type: 'text', text: messageText }] },
+                        { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` } }
+                    );
+                } catch (lineErr) {
+                    console.error(`❌ ไม่สามารถส่ง LINE หา ID: ${targetId} ได้`, lineErr.response?.data || lineErr.message);
+                }
+            }
         }
 
         return res.json({ status: 'success', message: 'ตรวจสอบสลิปสำเร็จ', transferorName });
