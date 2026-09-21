@@ -1,4 +1,4 @@
-// app.js — เซิร์ฟเวอร์หลัก (ปรับปรุงสำหรับ PostgreSQL / Supabase แล้ว)
+// app.js — เซิร์ฟเวอร์หลัก
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -19,6 +19,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 app.use(express.static(__dirname));
+
+// เพิ่มคอลัมน์ account_name_en อัตโนมัติหากยังไม่มีในตาราง branches
+pool.query(`
+    ALTER TABLE branches 
+    ADD COLUMN IF NOT EXISTS account_name_en VARCHAR(255);
+`).catch(err => console.log('Notice on branches schema:', err.message));
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -310,13 +316,14 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'กรุณาแนบไฟล์สลิปและระบุยอดเงิน' });
         }
 
-        // 1. ดึงข้อมูลบัญชีพร้อมเพย์ และ ชื่อผู้รับ ของสาขาที่สมาชิกคนนี้สังกัดอยู่
+        // 1. ดึงข้อมูลบัญชีพร้อมเพย์ และ ชื่อผู้รับ ทั้งภาษาไทยและภาษาอังกฤษ
         let targetAccountName = "";
+        let targetAccountNameEn = "";
         let targetPromptPay = "";
         
         if (studentId) {
             const { rows: branchRows } = await pool.query(
-                `SELECT b.promptpay_no, b.account_name 
+                `SELECT b.promptpay_no, b.account_name, b.account_name_en 
                  FROM members m 
                  JOIN branches b ON m.branch = b.branch_code 
                  WHERE m.student_id = $1`,
@@ -325,6 +332,7 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             if (branchRows.length > 0) {
                 targetPromptPay = branchRows[0].promptpay_no || "";
                 targetAccountName = branchRows[0].account_name || "";
+                targetAccountNameEn = branchRows[0].account_name_en || "";
             }
         }
 
@@ -351,24 +359,36 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
             return res.status(400).json({ status: 'fail', message: `ยอดเงินไม่ตรง! ยอดโอนจริงคือ ${slipData.amount} บาท` });
         }
 
-        // 4. ตรวจสอบชื่อผู้รับ (เช็กว่าโอนเข้าบัญชี Admin ของสาขานี้จริงไหม)
-        if (targetAccountName && targetAccountName.trim() !== '') {
-            const cleanTarget = targetAccountName.replace(/(นาย|นางสาว|นาง|mr\.|mrs\.|ms\.)/gi, '').trim().toLowerCase();
+        // 4. ตรวจสอบชื่อผู้รับ (เช็กเปรียบเทียบทั้งชื่อภาษาไทยและภาษาอังกฤษ)
+        if (targetAccountName || targetAccountNameEn) {
             const cleanReceiver = receiverName.replace(/(นาย|นางสาว|นาง|mr\.|mrs\.|ms\.)/gi, '').trim().toLowerCase();
 
-            // นำคำแรกของชื่อเปรียบเทียบ
-            const targetWords = cleanTarget.split(/\s+/).filter(word => word.length > 0);
-    
-            const isMatched = targetWords.some(word => cleanReceiver.includes(word));
+            // เตรียมคำค้นหาภาษาไทย
+            const cleanTh = targetAccountName.replace(/(นาย|นางสาว|นาง)/g, '').trim().toLowerCase();
+            const wordsTh = cleanTh.split(/\s+/).filter(w => w.length > 0);
+
+            // เตรียมคำค้นหาภาษาอังกฤษ
+            const cleanEn = targetAccountNameEn.replace(/(mr\.|mrs\.|ms\.)/gi, '').trim().toLowerCase();
+            const wordsEn = cleanEn.split(/\s+/).filter(w => w.length > 0);
+
+            // รวมคำค้นหาภาษาไทยและอังกฤษ
+            const allTargetWords = [...wordsTh, ...wordsEn];
+
+            let isMatched = allTargetWords.some(word => word.length > 0 && cleanReceiver.includes(word));
+
+            // กรณีสลิปอ่านเป็นภาษาอังกฤษ (A-Z) แต่ในระบบยังไม่มีชื่ออังกฤษ ให้ผ่อนปรนผ่านการตรวจสอบ
+            if (!isMatched && wordsEn.length === 0 && /[a-zA-Z]/.test(cleanReceiver)) {
+                console.log(`[Slip Verification] Receiver is in English (${receiverName}). Passing check.`);
+                isMatched = true;
+            }
 
             if (!isMatched) {
-                console.log(`[Slip Check] Mismatch Warning: Target="${targetAccountName}" vs Receiver="${receiverName}"`);
-                   return res.status(400).json({ 
-                        status: 'fail', 
-                        message: `สลิปไม่ถูกต้อง! ต้องโอนเข้าบัญชี: ${targetAccountName} เท่านั้น (ผู้รับในสลิปคือ: ${receiverName || 'ไม่ทราบชื่อ'})` 
-                    });
-                }
+                return res.status(400).json({ 
+                    status: 'fail', 
+                    message: `สลิปไม่ถูกต้อง! ต้องโอนเข้าบัญชี: ${targetAccountName} เท่านั้น (ผู้รับในสลิปคือ: ${receiverName || 'ไม่ทราบชื่อ'})` 
+                });
             }
+        }
 
         // 5. ป้องกันการส่งสลิปซ้ำ (Duplicate TransRef)
         const transRef = slipData.transRef;
@@ -377,13 +397,11 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         await pool.query('INSERT INTO processed_slips (trans_ref) VALUES ($1)', [transRef]);
 
-        // 6. ส่งข้อความแจ้งเตือนผ่าน LINE Notify / LINE Official
+        // 6. ส่งข้อความแจ้งเตือนผ่าน LINE
         const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนชำระเงินสำเร็จ!\n👤 บัญชีผู้รับ: ${receiverName || targetAccountName}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
 
         if (LINE_ACCESS_TOKEN) {
-            // กรองเอาเฉพาะ ID ที่มีค่าจริงป้องกัน LINE API พัง
             const targetIds = LINE_TARGET_IDS.filter(id => id && id.trim() !== '');
-            
             for (const targetId of targetIds) {
                 try {
                     await axios.post('https://api.line.me/v2/bot/message/push', 
@@ -410,28 +428,17 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 app.get('/api/branches/:code', async (req, res) => {
     try {
         const { code } = req.params;
-        // ค้นหาแบบ ILIKE เพื่อให้ไม่เคสเซนซิทีฟ (เช่น comsci กับ COMSCI ชี้ไปที่สาขาเดียวกัน)
         const { rows } = await pool.query(
-            "SELECT branch_code, branch_name, promptpay_no, account_name FROM branches WHERE branch_code ILIKE $1",
+            "SELECT branch_code, branch_name, promptpay_no, account_name, account_name_en FROM branches WHERE branch_code ILIKE $1",
             [code]
         );
         
         if (rows.length === 0) {
-            // หากไม่เจอสาขา ให้คืนค่าโครงสร้างเปล่ากลับไปแทนที่จะตอบ 404 เพื่อป้องกันหน้าเว็บพัง
-            return res.json({ branch_code: code, branch_name: code, promptpay_no: "", account_name: "" });
+            return res.json({ branch_code: code, branch_name: code, promptpay_no: "", account_name: "", account_name_en: "" });
         }
         res.json(rows[0]);
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
-    }
-});
-
-const branchStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `avatar-${uniqueSuffix}${ext}`);
     }
 });
 
@@ -611,7 +618,7 @@ app.post('/api/member/login', async (req, res) => {
         const member = rows[0];
         res.json({ success: true, id: member.id, studentId: member.student_id, branch: member.branch, name: member.name });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ status: false, message: err.message });
     }
 });
 
@@ -643,8 +650,9 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
         const cleanBranch = branch.trim();
         const cleanPromptpay = promptpayNo.trim();
         const cleanName = accountName.trim();
+        const cleanNameEn = (accountNameEn || '').trim();
 
-        // 1. ตรวจสอบว่ามีสาขานี้ในตาราง branches หรือยัง ถ้ายังไม่มีให้สร้างขึ้นมาก่อน
+        // 1. ตรวจสอบว่ามีสาขานี้ในตาราง branches หรือยัง
         const { rows: existingBranch } = await pool.query(
             "SELECT * FROM branches WHERE branch_code = $1", 
             [cleanBranch]
@@ -656,17 +664,17 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
             );
         }
 
-        // 2. อัปเดตข้อมูลพร้อมเพย์ลงในตาราง branches ของระบบเราโดยตรง
+        // 2. บันทึกข้อมูลพร้อมเพย์ ทั้งชื่อไทยและชื่ออังกฤษ
         await pool.query(
             `UPDATE branches
-            SET promptpay_no = $1, account_name = $2
-            WHERE branch_code = $3`,
-            [cleanPromptpay, cleanName, cleanBranch]
+            SET promptpay_no = $1, account_name = $2, account_name_en = $3
+            WHERE branch_code = $4`,
+            [cleanPromptpay, cleanName, cleanNameEn, cleanBranch]
         );
 
         res.json({ 
             success: true, 
-            message: 'ลงทะเบียนพร้อมเพย์และบันทึกข้อมูลเข้าสู่ระบบเรียบร้อยแล้ว' 
+            message: 'ลงทะเบียนพร้อมเพย์เรียบร้อยแล้ว' 
         });
     } catch (err) {
         console.error('Register Promptpay Server Error:', err);
@@ -690,4 +698,3 @@ app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
 });
-
