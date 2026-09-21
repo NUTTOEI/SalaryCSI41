@@ -629,7 +629,7 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
 
         try {
             const slipokRes = await axios.post(
-                `https://apo.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`,
+                `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`,
                 {
                     bank_code: '029',
                     bank_account_no: cleanPromptpay,
@@ -637,7 +637,7 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
                 },
                 {
                     headers: {
-                        'x-authrization': apiKey,
+                        'x-authorization': apiKey,
                         'Content-Type': 'application/json'
                     }
                 }
