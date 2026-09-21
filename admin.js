@@ -966,7 +966,77 @@ document.addEventListener('DOMContentLoaded', async() => {
             alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         }
     });
+
+    const promptpayModal = document.getElementById('promptpay-modal');
+    const openPromptpayBtn = document.getElementById('open-promptpay-btn');
+    const closePromptpayBtn = document.getElementById('close-promptpay-btn');
+    const savePromptpayBtn = document.getElementById('save-promptpay-btn');
+
+    openPromptpayBtn?.addEventListener('click', async () => {
+        dropdown?.classList.remove("active");
+        const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
+
+        try {
+            const res = await fetch(`/api/branches/${currentBranch}`);
+            if (res.ok) {
+                const data = await res.json();
+                const noInput = document.getElementById('promptpay-no-input');
+                const nameInput = document.getElementById('promptpay-name-input');
+                if (noInput) noInput.value = data.promptpay_no || '';
+                if (nameInput) nameInput.value = data.account_name || '';
+            }
+        } catch (e) {
+            console.error("Error loading branch info:", e);
+        }
+
+        if (promptpayModal) promptpayModal.style.display = 'flex';
+    });
+
+    closePromptpayBtn?.addEventListener('click', () => {
+        if (promptpayModal) promptpayModal.style.display = 'none';
+    });
+
+    savePromptpayBtn?.addEventListener('click', async () => {
+        const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
+        const promptpayNo = document.getElementById('promptpay-no-input')?.value.trim();
+        const accountName = document.getElementById('promptpay-name-input')?.value.trim();
+
+        if (!promptpayNo || !accountName) {
+            alert("กรุณากรอกข้อมูลให้ครบ");
+            return;
+        }
+
+        if (promptpayModal) promptpayModal.style.display = 'none';
+        showLoading("กำลังลงทะเบียนพร้อมเพย์...");
+
+        try {
+            const response = await fetch('/api/admin/branch/register-promptpay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    branch: currentBranch,
+                    promptpayNo,
+                    accountName
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showSuccess("ลงทะเบียนพร้อมเพย์สำเร็จ");
+            } else {
+                hideLoading();
+                alert("เกิดข้อผิดพลาด: " + (result.message || "ไม่สามารถบันทึกได้"));
+            }
+        } catch (error) {
+            hideLoading();
+            console.error("Save Promptpay Error: ", error);
+            alert("Error501")
+        }
+    })
 });
+
+
+
 
 // แสดงวงกลมหมุนรอโหลด
 function showLoading(message = "กำลังโหลดข้อมูล...") {

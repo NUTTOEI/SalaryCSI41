@@ -60,6 +60,9 @@
 
                 <div class="mega-col">
                     <div class="col-header">บัญชีผู้ใช้</div>
+                    <button type="button" class="mega-item-btn" id="open-promptpay-btn">
+                        <i class="ti ti-qrcode"></i> ลงทะเบียนพร้อมเพย์
+                    </button>
                     <button type="button" class="mega-item-btn danger" id="logout-btn">
                         <i class="ri-logout-box-r-line"></i> ออกจากระบบ
                     </button>
@@ -416,6 +419,34 @@
                     </svg>
                 </div>
                 <p id="success-text" style="margin: 0; font-size: 15px; color: #1E8E3E; font-weight: 600;">บันทึกสำเร็จ!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="promptpay-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon target">
+                    <i class="ti ti-qrcode"></i>
+                </div>
+                <div>
+                    <div class="modal-title">ตั้งค่าบัญชีพร้อมเพย์</div>
+                    <div class="modal-sub">เชื่อมต่อบัญชีสำหรับรับโอนเงิน</div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 12px;">
+                    <label class="modal-label" for="promptpay-no-input">หมายเลขพร้อมเพย์ (เบอร์โทร/เลขบัตรประชาชน)</label>
+                    <input type="text" id="promptpay-no-input" class="auth-input" placeholder="เช่น 086xxxxxxx">
+                </div>
+                <div>
+                    <label class="modal-label" for="promptpay-name-input">ชื่อบัญชีผู้รับเงิน</label>
+                    <input type="text" id="promptpay-name-input" class="auth-input" placeholder="เช่น น.ส.สมบัติ มากมาย">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-cancel" id="close-promptpay-btn">ยกเลิก</button>
+                <button type="button" class="btn-modal-save" id="save-promptpay-btn">บันทึกข้อมูล</button>
             </div>
         </div>
     </div>

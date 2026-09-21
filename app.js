@@ -255,7 +255,7 @@ app.post('/api/admin/reset', async (req, res) => {
 app.get('/api/settings/target', async (req, res) => {
     try {
         const { branch } = req.query;
-        const targetKey = branch ? `target_branch_${branch}` : 'target-amount';
+        const targetKey = branch ? `target_branch_${branch}` : 'target_amount';
 
         const { rows } = await pool.query('SELECT "value" FROM settings WHERE "key" = $1', [targetKey]);
         const targetVal = rows.length ? Number(rows[0].value) : 4000;
@@ -615,6 +615,42 @@ app.post('/api/member/upload-profile', (req, res) => {
     });
 });
 
+app.post('/api/admin/branch/register-promptpay', async (req, res) => {
+    try {
+        const { branch, promptpayNo, accountName } = req.body;
+        if (!branch || !promptpayNo || !accountName) {
+            return res.status(400).json({ success: false, message: 'กรอกข้อมูลให้ครบถ้วน' });
+        }
+
+        const cleanPromptpay = promptpayNo.trim();
+        const cleanName = accountName.trim();
+        const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
+
+        try {
+            await axios.post('https://api.slipok.com/api/line/bankaccount', {
+                bank_account_no: cleanPromptpay,
+                name: cleanName
+            }, {
+                headers: { 'x-authorization': apiKey, 'Content-Type': 'application/json' }
+            });
+        } catch (slipokErr) {
+            console.warn(' SlipOK API Notice:', slipokErr.response?.data || slipokErr.message);
+        }
+
+        await pool.query(
+            `UPDATE branches
+            SET promptpay_no = $1, account_name = $2
+            WHERE branch_code = $3`,
+            [cleanPromptpay, cleanName, branch]
+        );
+
+        res.json({ success: true, message: 'ลงทะเบียนพร้อมเพย์สำเร็จ' });
+    } catch (err) {
+        console.error('Register Promptpay Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 /* ------------------------------------------------------------------ */
 /* หน้าแรก + Webhook + start server                                    */
 /* ------------------------------------------------------------------ */
@@ -631,3 +667,4 @@ app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
 });
+
