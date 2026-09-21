@@ -625,13 +625,14 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
         const cleanPromptpay = promptpayNo.trim();
         const cleanName = accountName.trim();
         const apiKey = (process.env.SLIPOK_API_KEY || '').trim();
-        const slipokBranchId = process.env.SLIPOK_BRANCH_ID || '73437';
+        const slipokBranchId = (process.env.SLIPOK_BRANCH_ID || '73437').trim();
 
+        // 1. ลองยิงไป SlipOK
         try {
             const slipokRes = await axios.post(
                 `https://api.slipok.com/api/line/apikey/${slipokBranchId}/bankaccount`,
                 {
-                    bank_code: '029',
+                    bank_code: '029', // 029 คือ PromptPay
                     bank_account_no: cleanPromptpay,
                     name: cleanName
                 },
@@ -642,18 +643,14 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
                     }
                 }
             );
-
-            console.log('SlipOK Register Success:', slipokRes.data);
+            console.log('✅ SlipOK Register Success:', slipokRes.data);
         } catch (slipokErr) {
+            // บันทึก Log เตือนไว้ (เช่น บัญชีมีอยู่แล้วใน SlipOK) แต่ไม่หยุดการทำงาน
             const errData = slipokErr.response?.data;
-            console.error('SlipOK Register Error Details:', errData || slipokErr.message);
-
-            return res.status(400).json({
-                success: false,
-                message: `สร้างบัญชีไม่สำเร็จ: ${errData?.message || slipokErr.message}`
-            });
+            console.warn('⚠️ SlipOK Notice (Skipped):', errData || slipokErr.message);
         }
 
+        // 2. อัปเดตข้อมูลลงฐานข้อมูล PostgreSQL/Supabase
         await pool.query(
             `UPDATE branches
             SET promptpay_no = $1, account_name = $2
@@ -661,7 +658,11 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
             [cleanPromptpay, cleanName, branch]
         );
         
-        res.json({ success: true, message: 'ลงทะเบียนพร้อมเพย์ทั้งในระบบและ SlipOK เรียบร้อย'})
+        // ตอบกลับ client ด้วย success: true
+        res.json({ 
+            success: true, 
+            message: 'ลงทะเบียนพร้อมเพย์และบันทึกข้อมูลเรียบร้อยแล้ว'
+        });
     } catch (err) {
         console.error('Register Promptpay Server Error:', err);
         res.status(500).json({ success: false, message: err.message });
