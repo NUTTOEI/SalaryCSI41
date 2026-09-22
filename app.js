@@ -14,6 +14,8 @@ const { pool, testConnection } = require('./db');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 
+// ⚠️ fs module ไม่ต้องใช้เนื่องจากใช้ Cloudinary สำหรับเก็บรูปภาพ
+
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -25,6 +27,11 @@ pool.query(`
     ALTER TABLE branches 
     ADD COLUMN IF NOT EXISTS account_name_en VARCHAR(255);
 `).catch(err => console.log('Notice on branches schema:', err.message));
+
+// ตรวจสอบว่า Cloudinary environment variables มีค่าหรือไม่
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    console.warn('⚠️ Cloudinary environment variables not set!');
+}
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -45,11 +52,7 @@ const uploadToCloudinary = (fileBuffer) => {
     });
 };
 
-// const uploadsDir = path.join(__dirname, 'uploads');
-// if (!fs.existsSync(uploadsDir)) {
-//     fs.mkdirSync(uploadsDir, { recursive: true });
-// }
-// app.use('/uploads', express.static(uploadsDir));
+// ✅ ใช้ Cloudinary แทน - ไม่จำเป็นต้องเก็บไฟล์บนเซิร์ฟเวอร์
 
 const uploadMemberAvatar = multer({
     storage: multer.memoryStorage(),
@@ -688,13 +691,25 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'member.html')));
 app.post('/webhook', (req, res) => res.sendStatus(200));
 
+// Global error handler
 app.use((err, req, res, next) => {
-    if (err) return res.status(400).json({ success: false, message: err.message });
+    console.error('❌ Error:', err);
+    if (err) return res.status(500).json({ success: false, message: err.message });
     next();
+});
+
+// Handle 404 routes
+app.use((req, res) => {
+    res.status(404).json({ success: false, message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
