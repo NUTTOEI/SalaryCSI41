@@ -19,7 +19,7 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
-app.use(express.static(__dirname));
+
 
 // เพิ่มคอลัมน์ account_name_en อัตโนมัติหากยังไม่มีในตาราง branches
 pool.query(`
@@ -699,3 +699,5 @@ app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     await testConnection();
 });
+
+app.use(express.static(__dirname));

@@ -525,6 +525,12 @@ async function handleStudentIdSubmit(event) {
 async function loadMembersByStudentId(studentId) {
     try {
         const response = await fetch(`/api/members?studentId=${encodeURIComponent(studentId)}`, { cache: "no-store" });
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Server did not return JSON");
+        }
+        
         if (response.ok) {
             const data = await response.json();
             return data;
