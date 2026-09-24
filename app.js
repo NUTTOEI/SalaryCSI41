@@ -686,16 +686,17 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
 /* ------------------------------------------------------------------ */
 /* หน้าแรก + Webhook + start server                                    */
 /* ------------------------------------------------------------------ */
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'member.html')));
+app.use(express.static(__dirname));
+app.get('/', (req, res) =>  {
+    res.sendFile(path.join(__dirname, 'member.html'));
+});
+
 app.post('/webhook', (req, res) => res.sendStatus(200));
 
 app.use((err, req, res, next) => {
     if (err) return res.status(400).json({ success: false, message: err.message });
     next();
 });
-
-app.use(express.static(__dirname));
-
 
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'production') {
