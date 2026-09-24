@@ -5,11 +5,14 @@
       "src": "app.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["*.html", "*.css", "*.js"]
+        "includeFiles": ["*.html", "*.css", "*.js", "*.png", "*.jpg", "*.svg"]
       }
     }
   ],
   "routes": [
+    {
+      "handle": "filesystem"
+    },
     {
       "src": "/(.*)",
       "dest": "app.js"
