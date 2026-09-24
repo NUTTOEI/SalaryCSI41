@@ -696,11 +696,15 @@ app.use((err, req, res, next) => {
 
 app.use(express.static(__dirname));
 
-const PORT = process.env.PORT || 3000;[cite, 6]
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, async () => {
         console.log(`🚀 Server running on port ${PORT}`);
-        await testConnection();[cite, 6]
+        await testConnection();
     });
 }
 
