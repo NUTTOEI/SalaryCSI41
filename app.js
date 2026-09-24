@@ -20,13 +20,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 
-
-// เพิ่มคอลัมน์ account_name_en อัตโนมัติหากยังไม่มีในตาราง branches
-pool.query(`
-    ALTER TABLE branches 
-    ADD COLUMN IF NOT EXISTS account_name_en VARCHAR(255);
-`).catch(err => console.log('Notice on branches schema:', err.message));
-
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -687,6 +680,7 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
 /* หน้าแรก + Webhook + start server                                    */
 /* ------------------------------------------------------------------ */
 app.use(express.static(__dirname));
+
 app.get('/', (req, res) =>  {
     res.sendFile(path.join(__dirname, 'member.html'));
 });
