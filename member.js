@@ -367,7 +367,7 @@ async function loadLatestMembers() {
             if (Array.isArray(data) && data.length > 0) return data;
         }
     } catch (e) {
-        console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ MySQL ได้", e);
+        console.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Supabase ได้", e);
     }
     return [];
 }
