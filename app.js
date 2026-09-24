@@ -697,7 +697,7 @@ app.use((err, req, res, next) => {
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'member.html'));
 });
 
 const PORT = process.env.PORT || 3000;
