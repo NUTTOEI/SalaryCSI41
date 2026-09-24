@@ -3,13 +3,13 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/app.js"
+      "destination": "/index.html"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "app.js"
+      "dest": "index.html"
     }
   ]
 }
