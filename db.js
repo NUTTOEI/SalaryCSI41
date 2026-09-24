@@ -3,7 +3,7 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL,
     // ssl: { rejectUnauthorized: false }
 });
 
@@ -18,7 +18,7 @@ async function testConnection() {
         console.error('❌ เชื่อมต่อ PostgreSQL ไม่สำเร็จ');
         console.error('   Error:', err.message);
         console.error('   ตรวจสอบ DATABASE_URL ใน environment variables');
-        console.error('   DATABASE_URL=postgresql://postgres.uandfvtsrsxhwlvahtuz:Gogoh1103Gogoh1103%2F@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres');
+        console.error('   POSTGRES_URL=postgresql://user:password@host:port/database');
     }
 }
 
