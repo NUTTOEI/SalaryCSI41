@@ -1,4 +1,5 @@
 // app.js — เซิร์ฟเวอร์หลัก
+require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
