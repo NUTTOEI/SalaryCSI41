@@ -18,7 +18,7 @@ async function testConnection() {
         console.error('❌ เชื่อมต่อ PostgreSQL ไม่สำเร็จ');
         console.error('   Error:', err.message);
         console.error('   ตรวจสอบ DATABASE_URL ใน environment variables');
-        console.error('   DATABASE_URL=postgresql://user:password@host:port/database');
+        console.error('   DATABASE_URL=postgresql://postgres.uandfvtsrsxhwlvahtuz:Gogoh1103Gogoh1103%2F@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres');
     }
 }
 
