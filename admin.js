@@ -993,9 +993,10 @@ document.addEventListener('DOMContentLoaded', async() => {
                 const myLiffId = "2011812827-1tF2eBBP";
                 const liffUrl = `https://liff.line.me/${myLiffId}?branch=${currentBranch}`;
                 qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(liffUrl)}`;
-            } catch (e) {
-                console.error("Error loading branch info:", e);
             }
+        } catch (e) {
+            console.error("Error loading branch info:", e);
+        }
         if (promptpayModal) promptpayModal.style.display = 'flex';
     });
 
