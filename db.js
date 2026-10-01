@@ -10,7 +10,7 @@ const connectionString =
 
 console.log('🔍 Connection String Status:', {
     hasPostgresUrl: !!process.env.POSTGRES_URL,
-    // hasDatabaseUrl: !!process.env.DATABASE_URL,
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
     hasDbConnectionString: !!process.env.DB_CONNECTION_STRING,
     using: connectionString ? '✅ Found' : '❌ Not Found'
 });
