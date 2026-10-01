@@ -25,12 +25,14 @@ function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
         targetType = '02';
     }
 
+    const targetLength = String(formattedTarget.length).pedStart(2, '0');
     const tag29_target = `0016A000000677010111${targetType}${String(formattedTarget.length).padStart(2, '0')}${formattedTarget}`;
+    const tag29 = `29${String(subTag29.length).padStart(2, '0')}${subTag29}`;
     
     let payload = '';
     payload += '000201'; 
     payload += (amount && amount > 0) ? '010212' : '010211';
-    payload += `29${String(tag29_target.length).padStart(2, '0')}${tag29_target}`;
+    payload += tag29;
     payload += '5303764'; 
 
     if (amount && amount > 0) {
@@ -39,7 +41,7 @@ function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
     }
     
     payload += '5802TH'; 
-    payload += `59${String(merchantName.length).padStart(2, '0')}${merchantName}`;
+    payload += '5912PROMPTPAY QR';
     payload += '6007BANGKOK';
     payload += '6304';
     payload += crc16(payload);
