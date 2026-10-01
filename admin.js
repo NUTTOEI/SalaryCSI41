@@ -764,18 +764,11 @@ function applyAdminBranch(branch) {
 }
 
 function initAdminAuth() {
-    const savedBranch = sessionStorage.getItem("admin_branch");
     const loginModal = document.getElementById("login-modal");
     const mainDashboard = document.getElementById("main-dashboard");
 
-    if (savedBranch) {
-        if (loginModal) loginModal.style.display = "none";
-        if (mainDashboard) mainDashboard.style.display = "block";
-        applyAdminBranch(savedBranch);
-    } else {
-        if (loginModal) loginModal.style.display = "flex";
-        if (mainDashboard) mainDashboard.style.display = "none";
-    }
+    if (loginModal) loginModal.style.display = "flex";
+    if (mainDashboard) mainDashboard.style.display = "none";
 
     const submitBtn = document.getElementById("btn-login-submit");
     const inputEl = document.getElementById("login-student-id");
@@ -981,6 +974,7 @@ document.addEventListener('DOMContentLoaded', async() => {
             promptpayModal.style.display = 'none';
         }
     });
+    
 
     openPromptpayBtn?.addEventListener('click', async () => {
         dropdown?.classList.remove("active");
