@@ -25,8 +25,8 @@ function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
         targetType = '02';
     }
 
-    const targetLength = String(formattedTarget.length).pedStart(2, '0');
-    const tag29_target = `0016A000000677010111${targetType}${String(formattedTarget.length).padStart(2, '0')}${formattedTarget}`;
+    const targetLength = String(formattedTarget.length).padStart(2, '0');
+    const tag29_target = `0016A000000677010111${targetType}${targetLength}${formattedTarget}`;
     const tag29 = `29${String(subTag29.length).padStart(2, '0')}${subTag29}`;
     
     let payload = '';
