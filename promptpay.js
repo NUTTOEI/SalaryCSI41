@@ -11,9 +11,6 @@ function crc16(payload) {
 }
 
 function buildPromptPayPayload(target, amount, name = "PROMPTPAY") {
-    const safeName = (typeof name !== 'undefined' && name ? name : "PROMPTPAY");
-    const merchantName = safeName.substring(0, 25);
-    
     target = String(target).replace(/[^0-9]/g, '');
     let targetType = '01';
     let formattedTarget = target;
