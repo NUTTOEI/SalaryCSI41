@@ -982,8 +982,17 @@ document.addEventListener('DOMContentLoaded', async() => {
                 const data = await res.json();
                 const noInput = document.getElementById('promptpay-no-input');
                 const nameInput = document.getElementById('promptpay-name-input');
+                const nameEnInput = document.getElementById('promptpay-name-en-input');
                 if (noInput) noInput.value = data.promptpay_no || '';
                 if (nameInput) nameInput.value = data.account_name || '';
+                if (nameEnInput) nameEnInput.value = data.account_name_en || '';
+            }
+
+            const lineRes = await fetch(`/api/admin/branch/line?branch=${currentBranch}`);
+            if (lineRes.ok) {
+                const lineData = await lineRes.json();
+                const lineInput = document.getElementById('line-target-id-input');
+                if (lineInput) lineInput.value = lineData.lineTargetId || '';
             }
         } catch (e) {
             console.error("Error loading branch info:", e);
@@ -992,15 +1001,12 @@ document.addEventListener('DOMContentLoaded', async() => {
         if (promptpayModal) promptpayModal.style.display = 'flex';
     });
 
-    closePromptpayBtn?.addEventListener('click', () => {
-        if (promptpayModal) promptpayModal.style.display = 'none';
-    });
-
     savePromptpayBtn?.addEventListener('click', async () => {
         const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
         const promptpayNo = document.getElementById('promptpay-no-input')?.value.trim();
         const accountName = document.getElementById('promptpay-name-input')?.value.trim();
         const accountNameEn = document.getElementById('promptpay-name-en-input')?.value.trim();
+        const lineTargetId = document.getElementById('line-target-id-input')?.value.trim();
 
         if (!promptpayNo || !accountName) {
             alert("กรุณากรอกข้อมูลให้ครบ");
@@ -1008,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', async() => {
         }
 
         if (promptpayModal) promptpayModal.style.display = 'none';
-        showLoading("กำลังลงทะเบียนพร้อมเพย์...");
+        showLoading("กำลังบันทึกข้อมูล...");
 
         try {
             const response = await fetch('/api/admin/branch/register-promptpay', {
@@ -1022,6 +1028,17 @@ document.addEventListener('DOMContentLoaded', async() => {
                 })
             });
 
+            if (lineTargetId !== undefined) {
+                await fetch('/api/admin/branch/register-line', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        branch: currentBranch,
+                        lineTargetId: lineTargetId
+                    })
+                });
+            }
+
             const result = await response.json();
             if (result.success) {
                 showSuccess("ลงทะเบียนพร้อมเพย์สำเร็จ");
@@ -1032,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', async() => {
         } catch (error) {
             hideLoading();
             console.error("Save Promptpay Error: ", error);
-            alert("Error501")
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์")
         }
     })
 });

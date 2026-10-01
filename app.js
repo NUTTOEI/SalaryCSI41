@@ -315,19 +315,23 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
         let targetAccountName = "";
         let targetAccountNameEn = "";
         let targetPromptPay = "";
+        let branchLineTargetId = "";
+        let branchCode = "";
         
         if (studentId) {
             const { rows: branchRows } = await pool.query(
-                `SELECT b.promptpay_no, b.account_name, b.account_name_en 
+                `SELECT b.branch_code, b.promptpay_no, b.account_name, b.account_name_en, b.line_target_id
                  FROM members m 
                  JOIN branches b ON m.branch = b.branch_code 
                  WHERE m.student_id = $1`,
                 [studentId]
             );
             if (branchRows.length > 0) {
+                branchCode = branchRows[0].branch_code || "";
                 targetPromptPay = branchRows[0].promptpay_no || "";
                 targetAccountName = branchRows[0].account_name || "";
                 targetAccountNameEn = branchRows[0].account_name_en || "";
+                branchLineTargetId = branchRows[0].line_target_id || "";
             }
         }
 
@@ -392,11 +396,20 @@ app.post('/verify-slip', upload.single('slip_image'), async (req, res) => {
 
         await pool.query('INSERT INTO processed_slips (trans_ref) VALUES ($1)', [transRef]);
 
-        // 6. ส่งข้อความแจ้งเตือนผ่าน LINE
-        const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนชำระเงินสำเร็จ!\n👤 บัญชีผู้รับ: ${receiverName || targetAccountName}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
-
+    
         if (LINE_ACCESS_TOKEN) {
-            const targetIds = LINE_TARGET_IDS.filter(id => id && id.trim() !== '');
+            const messageText = `👥 ชื่อผู้โอน: ${transferorName || 'ไม่ระบุ'}\n🔔 แจ้งเตือนชำระเงินสำเร็จ!\n👤 บัญชีผู้รับ: ${receiverName || targetAccountName}\n💰 ยอดเงิน: ${slipData.amount} บาท\n📄 เลขที่รายการ: ${transRef}\n⏰ เวลาโอน: ${slipData.transDate} ${slipData.transTime}`;
+
+            const targetIds = new Set();
+
+            if (branchLineTargetId && branchLineTargetId.trim() !== '') {
+                targetIds.add(branchLineTargetId.trim());
+            }
+
+            if (targetIds.size === 0 && process.env.LINE_TARGET_ID) {
+                targetIds.add(process.env.LINE_TARGET_ID.trim());
+            }
+
             for (const targetId of targetIds) {
                 try {
                     await axios.post('https://api.line.me/v2/bot/message/push', 
@@ -673,6 +686,44 @@ app.post('/api/admin/branch/register-promptpay', async (req, res) => {
         });
     } catch (err) {
         console.error('Register Promptpay Server Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/admin/branch/register-line', async (req, res) => {
+    try {
+        const { branch, lineTargetId } = req.body;
+        if (!branch || !lineTargetId) {
+            return res.status(400).json({ success: false, message: 'กรุณาระบุสาขาและ LINE Target ID' });
+        }
+
+        const cleanBranch = branch.trim();
+        const cleanLineId = lineTargetId.trim();
+
+        await pool.query(
+            `UPDATE branches SET line_target_id = $1 WHERE branch_code = $2`,
+            [cleanLineId, cleanBranch]
+        );
+
+        res.json({ success: true, message: 'บันทึก LINE Notification สำหรับสาขาสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/admin/branch/line', async (req, res) => {
+    try {
+        const { branch } = req.query;
+        if (!branch) return res.status(400).json({ success: false, message: 'กรุณาระบุสาขา' });
+
+        const { rows } = await pool.query(
+            "SELECT line_target_id FROM branches WHERE branch_code = $1",
+            [branch.trim()]
+        );
+
+        const lineTargetId = rows.length > 0 ? rows[0].line_target_id : "";
+        res.json({ success: true, lineTargetId });
+    } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
