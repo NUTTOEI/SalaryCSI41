@@ -990,8 +990,9 @@ document.addEventListener('DOMContentLoaded', async() => {
 
             const qrImg = document.getElementById('line-connect-qrcode');
             if (qrImg) {
-                const liffUrl = `https://liff.line.me/YOUR_LIFF_ID?branch=${currentBranch}`;
-                qrImg.src = `https://quickart.io/qr?text=${encodeURIComponent(liffUrl)}&size=200`;
+                const myLiffId = "2011812827"
+                const liffUrl = `https://liff.line.me/${myLiffId}?branch=${currentBranch}`;
+                qrImg.src = `https://api.qrserver.com/qr?text=${encodeURIComponent(liffUrl)}&size=200`;
             }
         } catch (e) {
             console.error("Error loading branch info:", e);
