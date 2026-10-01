@@ -47,7 +47,7 @@ async function testConnection() {
         client.release();
 
         console.log('✅ เชื่อมต่อ PostgreSQL / Supabase สำเร็จ');
-        if (result && eesult.rows && result.rows[0]) {
+        if (result && result.rows && result.rows[0]) {
             console.log('   เวลาปัจจุบัน:', result.rows[0].now);
         }
         return true;
