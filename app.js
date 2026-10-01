@@ -60,11 +60,11 @@ const uploadMemberAvatar = multer({
 const upload = multer({ storage: multer.memoryStorage() });
 
 const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
-const rawTargetIds = [
-    process.env.LINE_TARGET_ID,
-    'Ufac721db10fe012f12410f3cf59c3eb7', 
-    'Ub0a8c9b3819bac10a968319bce489c2a'  
-];
+// const rawTargetIds = [
+    // process.env.LINE_TARGET_ID,
+    // 'Ufac721db10fe012f12410f3cf59c3eb7', 
+    // 'Ub0a8c9b3819bac10a968319bce489c2a'  
+// ];
 const LINE_TARGET_IDS = [...new Set(rawTargetIds.filter(id => id && id.trim() !== ''))];
 
 const DEFAULT_MONTHS = () => Array(12).fill(false);
