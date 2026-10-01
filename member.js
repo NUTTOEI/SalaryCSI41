@@ -2,7 +2,7 @@
 
 let selectedId = null;
 let searchQuery = "";
-let currentStudentId = localStorage.getItem("fund-dashboard-student-id") || null;
+let currentStudentId = null;
 
 if (typeof MEMBERS === "undefined") var MEMBERS = [];
 if (typeof TARGET_AMOUNT === "undefined") var TARGET_AMOUNT = 0;
@@ -388,22 +388,10 @@ async function loadTargetAmount() {
 
 async function initApp() {
     localStorage.setItem("fund-dashboard-mode", "month");
-    await loadTargetAmount();
+    localStorage.removeItem("fund-dashboard-student-id");
+    currentStudentId = null;
 
-    if (currentStudentId) {
-        const members = await loadMembersByStudentId(currentStudentId);
-        if (members && members.length > 0) {
-            MEMBERS = members;
-            const params = new URLSearchParams(location.search);
-            const backTo = params.get("id");
-            if (backTo && MEMBERS.some(m => m.id === Number(backTo))) {
-                showProfileScreen(Number(backTo));
-            } else {
-                showHomeScreen();
-            }
-            return;
-        }
-    }
+    await loadTargetAmount();
     showStudentIdScreen();
 }
 
@@ -507,7 +495,7 @@ async function handleStudentIdSubmit(event) {
 
     if (members && members.length > 0) {
         currentStudentId = studentId;
-        localStorage.setItem("fund-dashboard-student-id", studentId);
+        // localStorage.setItem("fund-dashboard-student-id", studentId);
         MEMBERS = members;
 
         const matchedMember = MEMBERS.find(m => m.studentId === studentId || m.id === Number(studentId));
