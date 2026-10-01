@@ -202,6 +202,7 @@ body {
 .stats-grid {
   display: flex;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 24px;
@@ -387,7 +388,7 @@ body {
 
 .m-text {
   min-width: 0;
-  text-align: center;
+  text-align: left;
 }
 
 .m-name {
@@ -402,9 +403,11 @@ body {
   font-size: 12px;
   color: #8B90A8;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  text-align: left;
 }
 
 .m-right {
@@ -1323,7 +1326,7 @@ body {
 }
 
 /* ==========================================================
-   Responsive Layout สำหรับมือถือ (เพิ่มเติม)
+   Responsive Layout สำหรับมือถือ (ปรับปรุงการจัดวาง)
    ========================================================== */
 @media (max-width: 768px) {
   .page {
@@ -1366,20 +1369,25 @@ body {
     text-align: center;
   }
 
+  /* 1. จัดการ์ดสถิติแบบ Flex และย้าย "ยังไม่จ่าย" มาไว้ตรงกลางด้านล่าง */
   .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    width: 100%;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    width: 100% !important;
   }
 
   .stat-card {
-    width: 100%;
-    padding: 10px;
+    flex: 0 1 calc(50% - 6px) !important;
+    min-width: 130px !important;
   }
 
-  .stat-card:nth-child(3) {
-    grid-column: span 2;
+  /* ย้ายการ์ดใบที่ 3 (ยังไม่จ่าย) ให้อยู่กึ่งกลางเต็มความกว้างแถว */
+  .stat-card:nth-child(3),
+  .stat-card.unpaid {
+    flex: 0 1 80% !important;
+    margin: 0 auto !important;
   }
 
   .add-member-row,
@@ -1408,7 +1416,7 @@ body {
     font-size: 12px;
   }
 
-  /* ปรับแต่งส่วนแสดงผลรายชื่อสมาชิกในมือถือ */
+  /* 2. ปรับแต่งส่วนแสดงผลรายชื่อสมาชิกในมือถือ (ชื่อ + รหัสนักศึกษาอยู่ใต้ชื่อ) */
   .member-row {
     display: flex;
     flex-direction: column;
@@ -1426,7 +1434,7 @@ body {
 
   .m-text {
     padding-left: 46px;
-    text-align: left;
+    text-align: left !important;
     width: 100%;
   }
 
@@ -1434,10 +1442,16 @@ body {
     font-size: 14px;
     white-space: normal;
     word-break: break-word;
+    text-align: left !important;
   }
 
   .m-sub {
-    justify-content: flex-start;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    margin-top: 2px;
   }
 
   .m-right {
