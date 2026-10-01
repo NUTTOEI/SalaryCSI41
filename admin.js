@@ -972,6 +972,16 @@ document.addEventListener('DOMContentLoaded', async() => {
     const closePromptpayBtn = document.getElementById('close-promptpay-btn');
     const savePromptpayBtn = document.getElementById('save-promptpay-btn');
 
+    closePromptpayBtn?.addEventListener('click', () => {
+        if (promptpayModal) promptpayModal.style.display = 'none';
+    });
+
+    promptpayModal?.addEventListener('click', (e) => {
+        if (e.target === promptpayModal) {
+            promptpayModal.style.display = 'none';
+        }
+    });
+
     openPromptpayBtn?.addEventListener('click', async () => {
         dropdown?.classList.remove("active");
         const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
