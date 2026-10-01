@@ -46,11 +46,6 @@ pool.on('connect', () => {
 
 async function testConnection() {
     try {
-        console.log('🔄 Testing database connection...');
-        const client = await pool.connect();
-        const result = await client.query('SELECT NOW()');
-        client.release();
-        
         console.log('✅ เชื่อมต่อ PostgreSQL / Supabase สำเร็จ');
         console.log('   เวลาปัจจุบัน:', result.rows[0].now);
         return true;
