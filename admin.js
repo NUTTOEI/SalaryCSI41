@@ -988,11 +988,10 @@ document.addEventListener('DOMContentLoaded', async() => {
                 if (nameEnInput) nameEnInput.value = data.account_name_en || '';
             }
 
-            const lineRes = await fetch(`/api/admin/branch/line?branch=${currentBranch}`);
-            if (lineRes.ok) {
-                const lineData = await lineRes.json();
-                const lineInput = document.getElementById('line-target-id-input');
-                if (lineInput) lineInput.value = lineData.lineTargetId || '';
+            const qrImg = document.getElementById('line-connect-qrcode');
+            if (qrImg) {
+                const liffUrl = `https://liff.line.me/YOUR_LIFF_ID?branch=${currentBranch}`;
+                qrImg.src = `https://quickart.io/qr?text=${encodeURIComponent(liffUrl)}&size=200`;
             }
         } catch (e) {
             console.error("Error loading branch info:", e);
@@ -1028,16 +1027,6 @@ document.addEventListener('DOMContentLoaded', async() => {
                 })
             });
 
-            if (lineTargetId !== undefined) {
-                await fetch('/api/admin/branch/register-line', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        branch: currentBranch,
-                        lineTargetId: lineTargetId
-                    })
-                });
-            }
 
             const result = await response.json();
             if (result.success) {

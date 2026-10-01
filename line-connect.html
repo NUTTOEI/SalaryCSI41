@@ -6,50 +6,50 @@
     <title>เชื่อมต่อ LINE Notification</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 40px 20px; background: #f7f8fc; }
-        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 320px; margin: 0 auto; }
-        .success-icon { font-size: 48px; color: #2e8b57; }
-        h2 { margin: 10px 0; color: #1b1f3b; }
-        p { color: #666; font-size: 14px; }
+        body { font-family: 'Noto Sans Thai', sans-serif; text-align: center; padding: 40px 20px; background: #F7F8FC; color: #1B1F3B; }
+        .card { background: white; padding: 32px 24px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); max-width: 320px; margin: 40px auto; }
+        .icon { font-size: 56px; margin-bottom: 12px; }
+        h2 { margin: 10px 0; font-size: 20px; font-weight: 600; }
+        p { color: #8B90A8; font-size: 13px; line-height: 1.5; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="status-icon" class="success-icon">🔄</div>
+        <div id="status-icon" class="icon">🔄</div>
         <h2 id="status-title">กำลังเชื่อมต่อ...</h2>
-        <p id="status-desc">กรุณารอสักครู่ ระบบกำลังผูกบัญชี LINE กับสาขา</p>
+        <p id="status-desc">กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลการแจ้งเตือนประจำสาขา</p>
     </div>
 
     <script>
-        async function main() {
-            // 1. อ่านค่า branch จาก URL (เช่น ?branch=comsci41)
+        async function connectLine() {
             const urlParams = new URLSearchParams(window.location.search);
             const branch = urlParams.get('branch');
 
             if (!branch) {
-                document.getElementById('status-title').innerText = "เกิดข้อผิดพลาด";
-                document.getElementById('status-desc').innerText = "ไม่พบข้อมูลสาขา";
+                showError("ไม่พบรหัสสาขา", "กรุณาสแกน QR Code ใหม่อีกครั้งจากหน้าเว็บแอดมิน");
                 return;
             }
 
-            // 2. ดึง LIFF ID และดึง Profile LINE
-            await liff.init({ liffId: "YOUR_LIFF_ID" }); // ใส่ LIFF ID จาก LINE Developers
-
-            if (!liff.isLoggedIn()) {
-                liff.login();
-                return;
-            }
-
-            const profile = await liff.getProfile();
-            const userId = profile.userId;
-
-            // 3. ยิง API บันทึกลงตาราง branches อัตโนมัติ
             try {
+                // 1. เรียกใช้งาน LIFF (ใส่ LIFF ID ของคุณตรงนี้)
+                await liff.init({ liffId: "YOUR_LIFF_ID" }); 
+
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+
+                // 2. ดึง User ID ของแอดมินที่สแกน
+                const profile = await liff.getProfile();
+                const userId = profile.userId;
+
+                // 3. ส่ง User ID ไปบันทึกลงตาราง branches
                 const res = await fetch('/api/admin/branch/register-line', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ branch: branch, lineTargetId: userId })
                 });
+
                 const data = await res.json();
 
                 if (data.success) {
@@ -57,17 +57,23 @@
                     document.getElementById('status-title').innerText = "เชื่อมต่อสำเร็จ!";
                     document.getElementById('status-desc').innerText = `ระบบผูก LINE การแจ้งเตือนเข้ากับสาขา ${branch} เรียบร้อยแล้ว`;
                     
-                    setTimeout(() => { liff.closeWindow(); }, 2500); // ปิดหน้าต่าง LIFF อัตโนมัติ
+                    // ปิดหน้าต่าง LIFF อัตโนมัติภายใน 2.5 วินาที
+                    setTimeout(() => { liff.closeWindow(); }, 2500);
                 } else {
-                    document.getElementById('status-title').innerText = "เกิดข้อผิดพลาด";
-                    document.getElementById('status-desc').innerText = data.message;
+                    showError("เกิดข้อผิดพลาด", data.message || "ไม่สามารถบันทึกข้อมูลได้");
                 }
             } catch (err) {
-                document.getElementById('status-title').innerText = "เชื่อมต่อล้มเหลว";
-                document.getElementById('status-desc').innerText = err.message;
+                showError("การเชื่อมต่อล้มเหลว", err.message);
             }
         }
-        main();
+
+        function showError(title, desc) {
+            document.getElementById('status-icon').innerText = "❌";
+            document.getElementById('status-title').innerText = title;
+            document.getElementById('status-desc').innerText = desc;
+        }
+
+        connectLine();
     </script>
 </body>
 </html>
