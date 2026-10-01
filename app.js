@@ -691,12 +691,13 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
+
     app.listen(PORT, async () => {
         console.log(`🚀 Server running on port ${PORT}`);
-        if (typeof testConnection === 'function') await testConnection();
+        if (typeof testConnection === 'function') {
+            await testConnection();
+        }
     });
-}
 
 module.exports = app;
 
