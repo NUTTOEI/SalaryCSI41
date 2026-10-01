@@ -1397,6 +1397,14 @@ body {
     gap: 8px;
   }
 
+  .add-member-row button,
+  .add-member-row .btn-danger {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
   .search-wrap,
   .add-name-input {
     width: 100%;
