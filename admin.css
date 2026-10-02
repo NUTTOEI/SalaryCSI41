@@ -1168,23 +1168,28 @@ body {
   object-fit: cover;
 }
 
-/* Mega Dropdown Menu การ์ดแผ่นใหญ่ลอยลงมา */
+/* Mega Dropdown Menu สำหรับหน้าจอคอมพิวเตอร์ (Default) */
 .mega-dropdown-menu {
-  position: fixed !important;
-  top: 60px !important;
-  left: 12px !important;
-  right: 12px !important;
-  width: auto !important;
+  position: absolute !important;
+  top: calc(100% + 10px) !important;
+  right: 0 !important;
+  left: auto !important;
+  width: 580px !important;
   max-width: none !important;
-  max-height: 82vh !important;
-  overflow-y: auto !important;
-  padding: 18px 16px !important;
-  border-radius: 16px !important;
-  box-shadow: 0 10px 30px rgba(27, 31, 59, 0.2) !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px !important;
+  box-shadow: 0 16px 40px rgba(27, 31, 59, 0.12) !important;
+  border: 1px solid #E2E8F0;
+  display: none;
+  animation: megaSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1001;
 }
 
 .mega-dropdown-menu.active {
-  display: block;
+  display: block !important;
 }
 
 @keyframes megaSlideDown {
@@ -1198,27 +1203,29 @@ body {
   }
 }
 
-/* ตารางแบ่งคอลัมน์ */
+/* ตารางแบ่ง 3 คอลัมน์บนจอคอม */
 .mega-dropdown-grid {
-  grid-template-columns: 1fr !important;
-  gap: 16px !important;
+  display: grid !important;
+  grid-template-columns: 1.2fr 1fr 1fr !important;
+  gap: 20px !important;
 }
 
 .mega-col {
-  gap: 6px !important;
-  border-bottom: 1px solid #F0F1F7;
-  padding-bottom: 12px;
-}
-
-.mega-col:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
 }
 
 .col-header {
-  font-size: 12px !important;
+  font-size: 13px !important;
+  font-weight: 600;
   color: #8B90A8 !important;
-  margin-bottom: 4px !important;
+  margin-bottom: 6px !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .badge-tag {
@@ -1268,11 +1275,25 @@ body {
   color: #8B90A8;
 }
 
-/* ปุ่มและลิงก์รายการในเมนู */
+/* ปุ่มและลิงก์รายการในเมนูสำหรับจอคอม */
 .mega-item-btn, .mega-item-link {
-  padding: 10px 12px !important;
-  font-size: 14px !important;
-  white-space: nowrap !important; /* ป้องกันข้อความเด้งลงบรรทัดใหม่ */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px !important;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #1B1F3B;
+  font-size: 13px !important;
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  white-space: nowrap !important;
   justify-content: flex-start !important;
 }
 
@@ -1301,7 +1322,7 @@ body {
   color: #DC2626;
 }
 
-/* เพิ่มต่อท้ายไฟล์ admin_2.css */
+/* Modal พร้อมเพย์ */
 #promptpay-modal .modal-card {
     max-width: 440px;
 }
@@ -1313,7 +1334,7 @@ body {
 }
 
 /* ==========================================================
-   Responsive Layout สำหรับมือถือ (ปรับปรุงการจัดวาง)
+   Responsive Layout สำหรับมือถือ (หน้าจอไม่เกิน 768px)
    ========================================================== */
 @media (max-width: 768px) {
   .page {
@@ -1370,7 +1391,6 @@ body {
     min-width: 130px !important;
   }
 
-  /* ย้ายการ์ดใบที่ 3 (ยังไม่จ่าย) ให้อยู่กึ่งกลางเต็มความกว้างแถว */
   .stat-card:nth-child(3),
   .stat-card.unpaid {
     flex: 0 1 80% !important;
@@ -1411,7 +1431,7 @@ body {
     font-size: 12px;
   }
 
-  /* 2. ปรับแต่งส่วนแสดงผลรายชื่อสมาชิกในมือถือ (ชื่อ + รหัสนักศึกษาอยู่ใต้ชื่อ) */
+  /* 2. ปรับแต่งส่วนแสดงผลรายชื่อสมาชิกในมือถือ */
   .member-row {
     display: flex;
     flex-direction: column;
@@ -1468,13 +1488,34 @@ body {
     right: 10px;
   }
 
+  /* 3. สไตล์ Mega Dropdown สลับเป็น 1 คอลัมน์เฉพาะบนมือถือ */
   .mega-dropdown-menu {
-    position: fixed;
-    top: 60px;
-    left: 12px;
-    right: 12px;
-    width: auto;
-    max-height: 80vh;
-    overflow-y: auto;
+    position: fixed !important;
+    top: 60px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+    padding: 18px 16px !important;
+  }
+
+  .mega-dropdown-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .mega-col {
+    border-bottom: 1px solid #F0F1F7 !important;
+    padding-bottom: 12px !important;
+  }
+
+  .mega-col:last-child {
+    border-bottom: none !important;
+  }
+
+  .mega-item-btn, .mega-item-link {
+    padding: 10px 12px !important;
+    font-size: 14px !important;
   }
 }
