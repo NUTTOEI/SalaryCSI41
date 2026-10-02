@@ -573,7 +573,7 @@ app.post('/api/admin/login', async (req, res) => {
             sameSite: 'lax'
         });
 
-        res.coolie('admin_branch', admin.branch, {
+        res.cookie('admin_branch', admin.branch, {
             maxAge: 7 * 24 * 60 * 60 * 1000,
             sameSite: 'lax'
         });
