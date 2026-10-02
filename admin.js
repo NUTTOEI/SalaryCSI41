@@ -108,12 +108,6 @@ function sortedFilteredMembers() {
         const f = state.filter === "all" ? true : state.filter === "paid" ? isPaid : !isPaid;
         return q && f;
     });
-    if (state.sort === "name") {
-        items = items.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
-    } else if (state.sort === "unpaid-first") {
-        items = items.slice().sort((a, b) => Number(isMemberPaidCurrent(a)) - Number(isMemberPaidCurrent(b)));
-    }
-    return items;
 }
 
 async function togglePaid(id) {
@@ -370,13 +364,6 @@ document.addEventListener("click", (e) => {
         document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active"));
         filterBtn.classList.add("active");
         setFilter(filterBtn.getAttribute("data-filter"));
-        return;
-    }
-
-    const sortBtn = e.target.closest("[data-sort]");
-    if (sortBtn) {
-        document.querySelectorAll("[data-sort]").forEach(b => b.classList.remove("active"));
-        setSort(sortBtn.getAttribute("data-sort"));
         return;
     }
 
