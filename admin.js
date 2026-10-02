@@ -1098,3 +1098,35 @@ function hideLoading() {
     if (modal) modal.style.display = "none";
 }
 
+function checkAuthStatus() {
+    const isLoggedIn = localStorage.getItem('admin_loggedIn');
+    const loginModal = document.getElementById('login-modal');
+
+    if (isLoggedIn === 'true') {
+        if (loginModal) loginModal.style.display = 'none';
+    } else {
+        if (loginModal) loginModal.style.display = 'flex';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', checkAuthStatus);
+
+window.addEventListener('pageshow', function (event) {
+    checkAuthStatus();
+});
+
+function handleLogin(passwordInput) {
+    const correctPassword = 'YOUR_PASSWORD';
+
+    if (passwordInput === correctPassword) {
+        localStorage.setItem('admin_loggedIn', 'true');
+        checkAuthStatus();
+    } else {
+        alert('รหัสผ่านไม่ถูกต้อง');
+    }
+}
+
+function handleLogout() {
+    localStorage.removeItem('admin_loggedIn');
+    window.location.reload();
+}

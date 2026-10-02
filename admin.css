@@ -1170,18 +1170,17 @@ body {
 
 /* Mega Dropdown Menu การ์ดแผ่นใหญ่ลอยลงมา */
 .mega-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  width: 580px; /* ความกว้างแบบการ์ดใหญ่สไตล์ Kept */
-  background: #ffffff;
-  border-radius: 20px; /* มุมโค้งมนพิเศษ */
-  padding: 24px;
-  box-shadow: 0 16px 40px rgba(27, 31, 59, 0.12);
-  border: 1px solid #E2E8F0;
-  display: none;
-  animation: megaSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1001;
+  position: fixed !important;
+  top: 60px !important;
+  left: 12px !important;
+  right: 12px !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: 82vh !important;
+  overflow-y: auto !important;
+  padding: 18px 16px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(27, 31, 59, 0.2) !important;
 }
 
 .mega-dropdown-menu.active {
@@ -1201,25 +1200,25 @@ body {
 
 /* ตารางแบ่งคอลัมน์ */
 .mega-dropdown-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr !important;
+  gap: 16px !important;
 }
 
 .mega-col {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 6px !important;
+  border-bottom: 1px solid #F0F1F7;
+  padding-bottom: 12px;
+}
+
+.mega-col:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .col-header {
-  font-size: 13px;
-  font-weight: 600;
-  color: #8B90A8;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 12px !important;
+  color: #8B90A8 !important;
+  margin-bottom: 4px !important;
 }
 
 .badge-tag {
@@ -1271,22 +1270,10 @@ body {
 
 /* ปุ่มและลิงก์รายการในเมนู */
 .mega-item-btn, .mega-item-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: #1B1F3B;
-  font-size: 13px;
-  font-family: 'Noto Sans Thai', sans-serif;
-  font-weight: 400;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-sizing: border-box;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  white-space: nowrap !important; /* ป้องกันข้อความเด้งลงบรรทัดใหม่ */
+  justify-content: flex-start !important;
 }
 
 .mega-item-btn:hover, .mega-item-link:hover {
