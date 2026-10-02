@@ -18,7 +18,8 @@ const streamifier = require('streamifier');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(cors());
+app.use(coolieParser());
+app.use(cors({ origin: true, credentials: true }));
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -571,6 +572,17 @@ app.post('/api/admin/login', async (req, res) => {
 
         const branchName = branchRows.length > 0 ? branchRows[0].branch_name : admin.branch;
 
+        res.cookie('admin_student_id', admin.student_id, {
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            sameSite: 'lax'
+        });
+
+        res.coolie('admin_branch', admin.branch, {
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            sameSite: 'lax'
+        });
+
         res.json({ 
             success: true, 
             studentId: admin.student_id, 
@@ -581,6 +593,22 @@ app.post('/api/admin/login', async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
+});
+
+app.get('/api/admin/check-auth', (req, res) => {
+    const adminStudentId = req.cookies.admin_student_id;
+    const adminBranch = req.cookies.admin_branch;
+
+    if (adminStudentId && adminBranch) {
+        return res.json({ loggedIn: true, studentId: adminStudentId, branch: adminBranch });
+    }
+    return res.json({ loggedin: false });
+});
+
+app.post('/api/admin.logout', (req, res) => {
+    res.clearCookie('admin_student_id');
+    res.clearCookie('admin_branch');
+    res.json({ success: true, message: 'ออกจากระบบสำเร็จ' });
 });
 
 /* ------------------------------------------------------------------ */
