@@ -803,7 +803,7 @@ async function loadBranchAvatar(branch) {
             const data = await response.json();
             const defaultImg = "https://res.cloudinary.com/j2qxdie6/image/upload/v1790938620/default-branch_hzhyhm.png";
 
-            const finalAvatarUrl = (data.avatarUrl && data.avatarUrl.trim() !== "" && data.avatarUrl.startWith("http"))
+            const finalAvatarUrl = (data.avatarUrl && data.avatarUrl.trim() !== "" && data.avatarUrl.startsWith("http"))
                 ? `${data.avatarUrl}?t=${Date.now()}`
                 : defaultImg;
 
