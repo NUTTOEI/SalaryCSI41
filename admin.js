@@ -249,7 +249,7 @@ function renderRow(m, index) {
     const statusInfo = getMemberStatus(m);
     const pill = `<span class="pill ${statusInfo.class}">${statusInfo.text}</span>`;
     const studentIdText = m.studentId ? `<div style="font-size:12px; color:#4C5FD5; font-weight:500; margin-top:2px;"> ${m.studentId}</div>` : '';
-    const subText = `${studentIdText}<div style="matgin-top:2px;">${statusInfo.subText}</div>`;
+    const subText = `${studentIdText}<div style="margin-top:2px;">${statusInfo.subText}</div>`;
     const historyCount = m.history ? m.history.length : 0;
     const branchBadge = `<span style="font-size:11px; background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; margin-left:6px;">${m.branch || 'comsci41'}</span>`;
 
@@ -267,7 +267,7 @@ function renderRow(m, index) {
         </div>
         <div class="m-text">
             <div class="m-name">${m.name} ${branchBadge}</div>
-            <div class="m-sub" style="flex-direction: column; align-items: center; gap: 1px;">${subText}</div>
+            <div class="m-sub" style="flex-direction: column; align-items: flex-start; gap: 1px;">${subText}</div>
         </div>
         <div class="m-right">
             <div class="m-amount" data-edit-amount="${m.id}" title="คลิกเพื่อแก้ยอดของคนนี้">${safeFmtMoney(total)}</div>
@@ -411,7 +411,7 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-document.addEventListener("DOMContentLoaded",  () => {
+document.addEventListener("DOMContentLoaded", () => {
     const searchInput = document.getElementById("search-input");
     const rateInput = document.getElementById("rate-input");
     const applyRateBtn = document.getElementById("apply-rate-btn");
@@ -479,7 +479,7 @@ function closeHistoryModal() {
 
 async function loadFromStorage() {
     try {
-        const adminBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+        const adminBranch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch") || "comsci41";
 
         const targetRes = await fetch(`/api/settings/target?branch=${adminBranch}`, { cache: "no-store" });
         if (targetRes.ok) {
@@ -529,7 +529,7 @@ async function saveTargetAmount() {
     showLoading("กำลังบันทึกเป้าหมาย...");
         
     try {
-        const adminBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+        const adminBranch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch") || "comsci41";
         const response = await fetch('/api/settings/target', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -627,7 +627,7 @@ function getMemberStatus(m) {
 async function loadBranchTitle() {
     const titleEl = document.getElementById("branch-title");
     if (!titleEl) return;
-    const branch = sessionStorage.getItem("admin_branch");
+    const branch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch");
     if (!branch) return;
     
     try {
@@ -644,7 +644,6 @@ async function loadBranchTitle() {
         titleEl.textContent = branch;
     }
 }
-
 
 // เข้าสู่ระบบแอดมินผ่าน MySQL
 async function processAdminLogin() {
@@ -704,7 +703,6 @@ async function processAdminRegister(e) {
         return;
     }
 
-    // 1. เรียกแสดงวงกลมหมุนรอโหลด
     showLoading("กำลังลงทะเบียน...");
 
     try {
@@ -720,7 +718,10 @@ async function processAdminRegister(e) {
             sessionStorage.setItem("admin_student_id", studentId);
             sessionStorage.setItem("admin_branch", branch);
 
-            // 2. แสดงติ๊กถูกสีเขียวสำเร็จ พร้อม Callback ปิด Modal หลังจบอนิเมชัน
+            localStorage.setItem("admin_student_id", studentId);
+            localStorage.setItem("admin_branch", branch);
+            localStorage.setItem("admin_loggedIn", "true");
+
             showSuccess("ลงทะเบียนสำเร็จ!", 1800, () => {
                 const loginModal = document.getElementById("login-modal");
                 const mainDashboard = document.getElementById("main-dashboard");
@@ -777,6 +778,7 @@ function initAdminAuth() {
     if (adminStudentId && adminBranch) {
         if (loginModal) loginModal.style.display = "none";
         if (mainDashboard) mainDashboard.style.display = "block";
+        applyAdminBranch(adminBranch);
     } else {
         if (loginModal) loginModal.style.display = "flex";
         if (mainDashboard) mainDashboard.style.display = "none";
@@ -930,14 +932,13 @@ document.addEventListener('DOMContentLoaded', async() => {
     });
 
     saveAvatarBtn?.addEventListener('click', async () => {
-        const currentBranch = sessionStorage.getItem("admin_branch") || "comsci41";
+        const currentBranch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch") || "comsci41";
         const newBranchName = branchNameInput ? branchNameInput.value.trim() : "";
 
         if (settingsModal) settingsModal.style.display = 'none';
         showLoading("กำลังบันทึกข้อมูล...");
 
         try {
-            // 1. บันทึกชื่อสาขา (ถ้ามีการกรอก)
             if (newBranchName) {
                 const nameRes = await fetch('/api/admin/branch/name', {
                     method: 'PUT',
@@ -950,7 +951,6 @@ document.addEventListener('DOMContentLoaded', async() => {
                 }
             }
 
-            // 2. อัปโหลดรูปภาพโปรไฟล์ (ถ้ามีการเลือกรูปใหม่)
             if (selectedFile) {
                 const formData = new FormData();
                 formData.append('branch', currentBranch);
@@ -968,7 +968,7 @@ document.addEventListener('DOMContentLoaded', async() => {
             }
 
             selectedFile = null;
-            await loadBranchTitle(); // โหลดชื่อสาขาและรีเฟรชหน้าจอ
+            await loadBranchTitle();
             showSuccess("บันทึกการตั้งค่าสำเร็จ!");
         } catch (error) {
             console.error('Update Error:', error);
@@ -991,11 +991,10 @@ document.addEventListener('DOMContentLoaded', async() => {
             promptpayModal.style.display = 'none';
         }
     });
-    
 
     openPromptpayBtn?.addEventListener('click', async () => {
         dropdown?.classList.remove("active");
-        const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
+        const currentBranch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch") || "BWBS";
 
         try {
             const res = await fetch(`/api/branches/${currentBranch}`);
@@ -1022,11 +1021,10 @@ document.addEventListener('DOMContentLoaded', async() => {
     });
 
     savePromptpayBtn?.addEventListener('click', async () => {
-        const currentBranch = sessionStorage.getItem("admin_branch") || "BWBS";
+        const currentBranch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch") || "BWBS";
         const promptpayNo = document.getElementById('promptpay-no-input')?.value.trim();
         const accountName = document.getElementById('promptpay-name-input')?.value.trim();
         const accountNameEn = document.getElementById('promptpay-name-en-input')?.value.trim();
-        const lineTargetId = document.getElementById('line-target-id-input')?.value.trim();
 
         if (!promptpayNo || !accountName) {
             alert("กรุณากรอกข้อมูลให้ครบ");
@@ -1048,7 +1046,6 @@ document.addEventListener('DOMContentLoaded', async() => {
                 })
             });
 
-
             const result = await response.json();
             if (result.success) {
                 showSuccess("ลงทะเบียนพร้อมเพย์สำเร็จ");
@@ -1059,15 +1056,11 @@ document.addEventListener('DOMContentLoaded', async() => {
         } catch (error) {
             hideLoading();
             console.error("Save Promptpay Error: ", error);
-            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์")
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         }
-    })
+    });
 });
 
-
-
-
-// แสดงวงกลมหมุนรอโหลด
 function showLoading(message = "กำลังโหลดข้อมูล...") {
     const modal = document.getElementById("loading-modal");
     const spinnerBox = document.getElementById("loading-spinner-box");
@@ -1082,7 +1075,6 @@ function showLoading(message = "กำลังโหลดข้อมูล...
     modal.style.display = "flex";
 }
 
-// เปลี่ยนเป็นเครื่องหมายติ๊กถูกสำเร็จ
 function showSuccess(message = "สำเร็จ!", duration = 1400, callback = null) {
     const modal = document.getElementById("loading-modal");
     const spinnerBox = document.getElementById("loading-spinner-box");
@@ -1109,28 +1101,12 @@ function showSuccess(message = "สำเร็จ!", duration = 1400, callback 
     }, duration);
 }
 
-// ปิด Modal โหลดกรณีเกิด Error
 function hideLoading() {
     const modal = document.getElementById("loading-modal");
     if (modal) modal.style.display = "none";
 }
 
+// ตรวจสอบสถานะและโหลดข้อมูลเมื่อกดปุ่ม ย้อนกลับ (Back Button)
 window.addEventListener('pageshow', function (event) {
     initAdminAuth();
 });
-
-function handleLogin(passwordInput) {
-    const correctPassword = 'YOUR_PASSWORD';
-
-    if (passwordInput === correctPassword) {
-        localStorage.setItem('admin_loggedIn', 'true');
-        checkAuthStatus();
-    } else {
-        alert('รหัสผ่านไม่ถูกต้อง');
-    }
-}
-
-function handleLogout() {
-    localStorage.removeItem('admin_loggedIn');
-    window.location.reload();
-}
