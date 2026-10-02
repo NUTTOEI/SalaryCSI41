@@ -12,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const FormData = require('form-data');
 const { pool, testConnection } = require('./db');
+const DEFAULT_BRANCH_AVATAR = "https://res.cloudinary.com/j2qxdie6/image/upload/v1790938620/default-branch_hzhyhm.png";
 
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
@@ -540,7 +541,9 @@ app.post('/api/admin/register', async (req, res) => {
         const { rows: existingBranch } = await pool.query("SELECT * FROM branches WHERE branch_code = $1", [cleanBranch]);
         
         if (existingBranch.length === 0) {
-            await pool.query("INSERT INTO branches (branch_code, branch_name, profile_img) VALUES ($1, $2, $3)", [cleanBranch, cleanBranch, `${cleanBranch}.png`]);
+            await pool.query(
+                "INSERT INTO branches (branch_code, branch_name, profile_img) VALUES ($1, $2, $3)", 
+                [cleanBranch, cleanBranch, DEFAULT_BRANCH_AVATAR]);
         }
 
         await pool.query("INSERT INTO admins (student_id, name, branch) VALUES ($1, $2, $3)", [studentId.trim(), name.trim(), branch.trim()]);
@@ -622,7 +625,7 @@ app.post('/api/member/register', async (req, res) => {
 
         const { rows: existingBranch } = await pool.query("SELECT * FROM branches WHERE branch_code = $1", [cleanBranch]);
         if (existingBranch.length === 0) {
-            await pool.query("INSERT INTO branches (branch_code, branch_name, profile_img) VALUES ($1, $2, $3)", [cleanBranch, cleanBranch, `${cleanBranch}.png`]);
+            await pool.query("INSERT INTO branches (branch_code, branch_name, profile_img) VALUES ($1, $2, $3)", [cleanBranch, cleanBranch, DEFAULT_BRANCH_AVATAR]);
         }
 
         const { rows: existing } = await pool.query("SELECT id FROM members WHERE student_id = $1", [cleanStudentId]);

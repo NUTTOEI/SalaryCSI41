@@ -801,9 +801,9 @@ async function loadBranchAvatar(branch) {
         const response = await fetch(`/api/branch/profile?branch=${branch}`);
         if (response.ok) {
             const data = await response.json();
-            const defaultImg = "default-branch.png";
+            const defaultImg = "https://res.cloudinary.com/j2qxdie6/image/upload/v1790938620/default-branch_hzhyhm.png";
 
-            const finalAvatarUrl = (data.avatarUrl && data.avatarUrl.trim() !== "")
+            const finalAvatarUrl = (data.avatarUrl && data.avatarUrl.trim() !== "" && data.avatarUrl.startWith("http"))
                 ? `${data.avatarUrl}?t=${Date.now()}`
                 : defaultImg;
 
