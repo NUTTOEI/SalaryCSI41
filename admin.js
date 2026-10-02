@@ -815,11 +815,10 @@ async function loadBranchAvatar(branch) {
                 if (headerAvatarImg) headerAvatarImg.src = finalAvatarUrl;
                 if (settingImg) settingImg.src = finalAvatarUrl;
             }
+        } catch (err) {
+            console.error("ไม่สามารถดึงรูปโปรไฟล์สาขาได้:", err);
         }
-    } catch (err) {
-        console.error("ไม่สามารถดึงรูปโปรไฟล์สาขาได้:", err);
     }
-}
 
 // Event Listeners สำหรับ UI Components
 document.addEventListener('DOMContentLoaded', async() => {
