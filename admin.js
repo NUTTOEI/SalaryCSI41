@@ -102,7 +102,7 @@ function computeStats() {
 }
 
 function sortedFilteredMembers() {
-    let items = MEMBERS.filter(m => {
+    return MEMBERS.filter(m => {
         const isPaid = isMemberPaidCurrent(m);
         const q = m.name ? m.name.includes(state.query.trim()) : false;
         const f = state.filter === "all" ? true : state.filter === "paid" ? isPaid : !isPaid;
