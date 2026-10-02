@@ -348,29 +348,37 @@ body {
 }
 
 .member-list {
-  background: #fff;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(27, 31, 59, 0.06);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
 }
 
 .member-row {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(27, 31, 59, 0.04);
+  border: 1px solid #E4E6F0;
   display: grid;
   grid-template-columns: 36px 1fr 230px;
   align-items: center;
   gap: 14px;
-  padding: 13px 18px;
-  border-bottom: 1px solid #F0F1F7;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
   cursor: pointer;
-  transition: background 0.15s;
 }
 
 .member-row:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid #E4E6F0;
 }
 
 .member-row:hover {
-  background: #F7F8FC;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 95, 213, 0.12);
+  border-color: #C7CCEB;
 }
 
 .m-avatar {
@@ -1439,6 +1447,8 @@ body {
     padding: 12px 14px;
     gap: 10px;
     position: relative;
+    border-radius: 14px;
+    background: #ffffff;
   }
 
   .m-avatar {
