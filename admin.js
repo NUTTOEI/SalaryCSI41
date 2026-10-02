@@ -807,18 +807,18 @@ async function loadBranchAvatar(branch) {
                 ? `${data.avatarUrl}?t=${Date.now()}`
                 : defaultImg;
 
-                const avatarImg = document.getElementById('branch-avatar-img');
-                const headerAvatarImg = document.getElementById('header-avatar-img');
-                const settingImg = document.getElementById('settings-avatar-preview');
+            const avatarImg = document.getElementById('branch-avatar-img');
+            const headerAvatarImg = document.getElementById('header-avatar-img');
+            const settingImg = document.getElementById('settings-avatar-preview');
 
-                if (avatarImg) avatarImg.src = finalAvatarUrl;
-                if (headerAvatarImg) headerAvatarImg.src = finalAvatarUrl;
-                if (settingImg) settingImg.src = finalAvatarUrl;
-            }
-        } catch (err) {
-            console.error("ไม่สามารถดึงรูปโปรไฟล์สาขาได้:", err);
+            if (avatarImg) avatarImg.src = finalAvatarUrl;
+            if (headerAvatarImg) headerAvatarImg.src = finalAvatarUrl;
+            if (settingImg) settingImg.src = finalAvatarUrl;
         }
+    } catch (err) {
+        console.error("ไม่สามารถดึงรูปโปรไฟล์สาขาได้:", err);
     }
+}
 
 // Event Listeners สำหรับ UI Components
 document.addEventListener('DOMContentLoaded', async() => {
