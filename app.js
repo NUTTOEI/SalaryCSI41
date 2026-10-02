@@ -1,6 +1,7 @@
 // app.js — เซิร์ฟเวอร์หลัก
 require('dotenv').config(); 
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const multer = require('multer');
 const crypto = require('crypto');
@@ -39,12 +40,6 @@ const uploadToCloudinary = (fileBuffer) => {
         streamifier.createReadStream(fileBuffer).pipe(stream);
     });
 };
-
-// const uploadsDir = path.join(__dirname, 'uploads');
-// if (!fs.existsSync(uploadsDir)) {
-//     fs.mkdirSync(uploadsDir, { recursive: true });
-// }
-// app.use('/uploads', express.static(uploadsDir));
 
 const uploadMemberAvatar = multer({
     storage: multer.memoryStorage(),
