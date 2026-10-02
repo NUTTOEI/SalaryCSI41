@@ -801,15 +801,19 @@ async function loadBranchAvatar(branch) {
         const response = await fetch(`/api/branch/profile?branch=${branch}`);
         if (response.ok) {
             const data = await response.json();
+            const defaultImg = "default-branch.png";
+            const finalAvatarUrl = (data.avatarUrl && data.avatarUrl.trim() !== "")
+                ? `${data.avatarUrl}?t=${Date.now()}`
+                : defaultImg;
+
             if (data.avatarUrl) {
                 const avatarImg = document.getElementById('branch-avatar-img');
                 const headerAvatarImg = document.getElementById('header-avatar-img');
                 const settingImg = document.getElementById('settings-avatar-preview');
-                const timestampedUrl = `${data.avatarUrl}?t=${Date.now()}`;
 
-                if (avatarImg) avatarImg.src = timestampedUrl;
-                if (headerAvatarImg) headerAvatarImg.src = timestampedUrl;
-                if (settingImg) settingImg.src = timestampedUrl;
+                if (avatarImg) avatarImg.src = finalAvatarUrl;
+                if (headerAvatarImg) headerAvatarImg.src = finalAvatarUrl;
+                if (settingImg) settingImg.src = finalAvatarUrl;
             }
         }
     } catch (err) {
