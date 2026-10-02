@@ -255,7 +255,7 @@ function renderRow(m, index) {
 
     let avatarHTML = '';
     if (m.profileImg) {
-        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" onerror="this.parentElement.innerHTML='${displayNum}';" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
     } else {
         avatarHTML = displayNum;
     }
@@ -802,11 +802,11 @@ async function loadBranchAvatar(branch) {
         if (response.ok) {
             const data = await response.json();
             const defaultImg = "default-branch.png";
+
             const finalAvatarUrl = (data.avatarUrl && data.avatarUrl.trim() !== "")
                 ? `${data.avatarUrl}?t=${Date.now()}`
                 : defaultImg;
 
-            if (data.avatarUrl) {
                 const avatarImg = document.getElementById('branch-avatar-img');
                 const headerAvatarImg = document.getElementById('header-avatar-img');
                 const settingImg = document.getElementById('settings-avatar-preview');
