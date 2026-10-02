@@ -675,6 +675,10 @@ async function processAdminLogin() {
         sessionStorage.setItem("admin_name", data.name || "");
         sessionStorage.setItem("admin_branch_name", data.branchName);
 
+        localStorage.setItem("admin_student_id", data.studentId);
+        localStorage.setItem("admin_branch", data.branch);
+        localStorage.setItem("admin_loggedIn", "true");
+
         const loginModal = document.getElementById("login-modal");
         const mainDashboard = document.getElementById("main-dashboard");
 
@@ -767,8 +771,16 @@ function initAdminAuth() {
     const loginModal = document.getElementById("login-modal");
     const mainDashboard = document.getElementById("main-dashboard");
 
-    if (loginModal) loginModal.style.display = "flex";
-    if (mainDashboard) mainDashboard.style.display = "none";
+    const adminStudentId = sessionStorage.getItem("admin_student_id") || localStorage.getItem("admin_student_id");
+    const adminBranch = sessionStorage.getItem("admin_branch") || localStorage.getItem("admin_branch");
+
+    if (adminStudentId && adminBranch) {
+        if (loginModal) loginModal.style.display = "none";
+        if (mainDashboard) mainDashboard.style.display = "block";
+    } else {
+        if (loginModal) loginModal.style.display = "flex";
+        if (mainDashboard) mainDashboard.style.display = "none";
+    }
 
     const submitBtn = document.getElementById("btn-login-submit");
     const inputEl = document.getElementById("login-student-id");
@@ -863,6 +875,11 @@ document.addEventListener('DOMContentLoaded', async() => {
             sessionStorage.removeItem("admin_student_id");
             sessionStorage.removeItem("admin_branch");
             sessionStorage.removeItem("admin_name");
+
+            localStorage.removeItem("admin_student_id");
+            localStorage.removeItem("admin_branch");
+            localStorage.removeItem("admin_loggedIn");
+            
             location.reload();
         });
     }
@@ -1098,21 +1115,8 @@ function hideLoading() {
     if (modal) modal.style.display = "none";
 }
 
-function checkAuthStatus() {
-    const isLoggedIn = localStorage.getItem('admin_loggedIn');
-    const loginModal = document.getElementById('login-modal');
-
-    if (isLoggedIn === 'true') {
-        if (loginModal) loginModal.style.display = 'none';
-    } else {
-        if (loginModal) loginModal.style.display = 'flex';
-    }
-}
-
-document.addEventListener('DOMContentLoaded', checkAuthStatus);
-
 window.addEventListener('pageshow', function (event) {
-    checkAuthStatus();
+    initAdminAuth();
 });
 
 function handleLogin(passwordInput) {
