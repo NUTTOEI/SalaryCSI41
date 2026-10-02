@@ -255,7 +255,7 @@ function renderRow(m, index) {
 
     let avatarHTML = '';
     if (m.profileImg) {
-        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" onerror="this.parentElement.innerHTML='${displayNum}';" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        avatarHTML = `<img src="${m.profileImg}" alt="${m.name}" onerror="this.onerror=null; this.parentElement.innerHTML='${displayNum}';" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
     } else {
         avatarHTML = displayNum;
     }
